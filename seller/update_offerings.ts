@@ -1,21 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import {
-  createJobOffering,
-  deleteJobOffering,
-  type JobOfferingData,
-} from "./acp-client/index.js";
+import { type JobOfferingData, type PriceV2 } from "../scripts/api.js";
+import { createJobOffering, deleteJobOffering } from "../scripts/api.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CONFIG_JSON_PATH = path.resolve(__dirname, "..", "config.json");
-
-interface PriceV2 {
-  type: "fixed";
-  value: number;
-}
 
 interface OfferingJson {
   name: string;
@@ -25,7 +17,7 @@ interface OfferingJson {
   priceV2?: PriceV2;
   slaMinutes?: number;
   requiredFunds: boolean;
-  requirement?: Record<string, string>;
+  requirement?: Record<string, any>;
   deliverable?: string;
 }
 
@@ -73,7 +65,9 @@ function validateOfferingJson(filePath: string): ValidationResult {
 
   if (!json.description || typeof json.description !== "string") {
     result.valid = false;
-    result.errors.push('offering.json must have a "description" field (string)');
+    result.errors.push(
+      'offering.json must have a "description" field (string)'
+    );
   } else if (json.description.trim() === "") {
     result.valid = false;
     result.errors.push('"description" field cannot be empty');
@@ -187,24 +181,6 @@ function validateHandlers(
   return result;
 }
 
-function readApiKey(): string {
-  try {
-    const raw = fs.readFileSync(CONFIG_JSON_PATH, "utf-8");
-    const config = JSON.parse(raw);
-    const key = config?.LITE_AGENT_API_KEY;
-    if (typeof key === "string" && key.trim().length > 0) return key;
-  } catch {
-    // config.json missing or unreadable — fall through
-  }
-  const envKey = process.env.LITE_AGENT_API_KEY?.trim();
-  if (envKey) return envKey;
-
-  console.error(
-    "❌ No API key found. Run `npm run setup` first or set LITE_AGENT_API_KEY."
-  );
-  return process.exit(1) as never;
-}
-
 /**
  * Build the ACP job-offering payload from an offering.json object.
  * Fields like priceV2, slaMinutes, etc. can be specified directly in the
@@ -229,7 +205,9 @@ function resolveOfferingDir(offeringName: string): string {
 function ensureOfferingDirExists(offeringsDir: string, offeringName: string) {
   if (!fs.existsSync(offeringsDir)) {
     console.error(`❌ Error: Offering directory not found: ${offeringsDir}`);
-    console.error(`\n   Create it with: mkdir -p seller/offerings/${offeringName}`);
+    console.error(
+      `\n   Create it with: mkdir -p seller/offerings/${offeringName}`
+    );
     process.exit(1);
   }
 
@@ -307,11 +285,10 @@ async function createOffering(offeringName: string) {
   const json: OfferingJson = JSON.parse(
     fs.readFileSync(offeringJsonPath, "utf-8")
   );
-  const apiKey = readApiKey();
   const acpPayload = buildAcpPayload(json);
 
   console.log("🚀 Registering offering with ACP network...");
-  const result = await createJobOffering(apiKey, acpPayload);
+  const result = await createJobOffering(acpPayload);
 
   if (result.success) {
     console.log("   ✅ Offering successfully registered with ACP.\n");
@@ -329,10 +306,8 @@ async function deleteOffering(offeringName: string) {
 
   ensureOfferingDirExists(offeringsDir, offeringName);
 
-  const apiKey = readApiKey();
-
   console.log("🚀 Delisting offering from ACP network...");
-  const result = await deleteJobOffering(apiKey, offeringName);
+  const result = await deleteJobOffering(offeringName);
 
   if (result.success) {
     console.log("   ✅ Offering successfully delisted from ACP.\n");
@@ -346,12 +321,8 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length < 2) {
-    console.error(
-      "Usage: npm run offering:create -- <offering-name>"
-    );
-    console.error(
-      "       npm run offering:delete -- <offering-name>"
-    );
+    console.error("Usage: npm run offering:create -- <offering-name>");
+    console.error("       npm run offering:delete -- <offering-name>");
     process.exit(1);
   }
 

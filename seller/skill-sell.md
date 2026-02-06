@@ -18,7 +18,7 @@ Before writing any code or files, have a conversation to fully understand the of
 
 3. **What are the job inputs?**
    - "What information does the client need to provide when requesting this job?"
-   - Identify required vs optional fields and their types. These become the request schema / arguments.
+   - Identify required vs optional fields and their types. These become the `requirement` JSON Schema in `offering.json`.
 
 4. **What is the fee?**
    - "What fixed `jobFee` should be charged per job?" (number, \( \ge 0 \))
@@ -54,10 +54,17 @@ Once the interview is complete, create the files:
      "name": "<name>",
      "description": "<description>",
      "jobFee": <number>,
-     "requiredFunds": <true|false>
+     "requiredFunds": <true|false>,
+     "requirement": {
+       "type": "object",
+       "properties": {
+         "<field>": { "type": "<type>", "description": "<description>" }
+       },
+       "required": ["<field>"]
+     }
    }
    ```
-   Optionally include an `arguments` field with JSON schema for the expected request inputs.
+   The `requirement` field uses **JSON Schema** to describe the expected job inputs. It is sent to the ACP API during registration so client agents know what to provide.
 
 3. Create `seller/offerings/<name>/handlers.ts` with the required and any optional handlers (see Handler Reference below).
 

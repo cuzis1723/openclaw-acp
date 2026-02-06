@@ -1,6 +1,0 @@
-{
-  "name": "donation-job",
-  "description": "A donation service that accepts a donor's name and returns a thank you message",
-  "jobFee": 0,
-  "requiredFunds": false
-}
