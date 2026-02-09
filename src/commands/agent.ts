@@ -4,6 +4,7 @@
 // acp agent create  — Create a new agent (auto-login if needed)
 // =============================================================================
 
+import readline from "readline";
 import * as output from "../lib/output.js";
 import {
   readConfig,
@@ -11,6 +12,9 @@ import {
   getActiveAgent,
   findAgentByName,
   activateAgent,
+  findSellerPid,
+  isProcessRunning,
+  removePidFromConfig,
   type AgentEntry,
 } from "../lib/config.js";
 import {
@@ -24,6 +28,84 @@ import {
 function redactApiKey(key: string | undefined): string {
   if (!key || key.length < 8) return "(not available)";
   return `${key.slice(0, 4)}...${key.slice(-4)}`;
+}
+
+function confirmPrompt(prompt: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(prompt, (answer) => {
+      rl.close();
+      const a = answer.trim().toLowerCase();
+      resolve(a === "y" || a === "yes" || a === "");
+    });
+  });
+}
+
+function killSellerProcess(pid: number): boolean {
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    return false;
+  }
+  // Wait up to 2 seconds for process to stop
+  for (let i = 0; i < 10; i++) {
+    const start = Date.now();
+    while (Date.now() - start < 200) { /* busy wait */ }
+    if (!isProcessRunning(pid)) {
+      removePidFromConfig();
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if seller runtime is running. If so, warn the user and ask for
+ * confirmation to stop it. Returns true if it's safe to proceed (no seller
+ * running, or seller was stopped). Returns false if the user cancelled.
+ * Calls output.fatal (exits) if the seller could not be killed.
+ */
+export async function stopSellerIfRunning(): Promise<boolean> {
+  const sellerPid = findSellerPid();
+  if (sellerPid === undefined) return true;
+
+  const active = getActiveAgent();
+  const activeName = active ? `"${active.name}"` : "the current agent";
+
+  let offeringNames: string[] = [];
+  try {
+    const { getMyAgentInfo } = await import("../lib/wallet.js");
+    const info = await getMyAgentInfo();
+    offeringNames = (info.jobs ?? []).map((j: any) => j.name);
+  } catch {
+    // Non-fatal — just won't show offering names
+  }
+
+  const offeringsLine = offeringNames.length > 0
+    ? `\n  Active Job Offerings being served: ${offeringNames.join(", ")}\n`
+    : "";
+  output.warn(
+    `Seller runtime process is running (PID ${sellerPid}) for ${activeName}. ` +
+    `It must be stopped before switching agents, because the runtime ` +
+    `is tied to the current agent's API key.${offeringsLine}\n`
+  );
+  const ok = await confirmPrompt("  Stop the seller runtime process and continue? (Y/n): ");
+  if (!ok) {
+    return false;
+  }
+  output.log(`  Stopping seller runtime (PID ${sellerPid})...`);
+  const stopped = killSellerProcess(sellerPid);
+  if (stopped) {
+    output.log(`  Seller runtime stopped.\n`);
+    return true;
+  }
+  output.fatal(
+    `Could not stop seller process (PID ${sellerPid}). Try: kill -9 ${sellerPid}`
+  );
+  return false; // unreachable (fatal exits), but satisfies TS
 }
 
 function displayAgents(agents: AgentEntry[]): void {
@@ -87,6 +169,13 @@ export async function switchAgent(name: string): Promise<void> {
     );
   }
 
+  // Stop seller runtime if running (API key will change)
+  const proceed = await stopSellerIfRunning();
+  if (!proceed) {
+    output.log("  Agent switch cancelled.\n");
+    return;
+  }
+
   // Regenerate API key (requires auth)
   const sessionToken = await ensureSession();
 
@@ -113,6 +202,13 @@ export async function switchAgent(name: string): Promise<void> {
 export async function create(name: string): Promise<void> {
   if (!name) {
     output.fatal("Usage: acp agent create <name>");
+  }
+
+  // Stop seller runtime if running (API key will change)
+  const proceed = await stopSellerIfRunning();
+  if (!proceed) {
+    output.log("  Agent creation cancelled.\n");
+    return;
   }
 
   const sessionToken = await ensureSession();

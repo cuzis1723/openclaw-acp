@@ -4,14 +4,14 @@
 // acp serve status  — Show runtime process info
 // =============================================================================
 
-import { spawn, execSync } from "child_process";
+import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import * as output from "../lib/output.js";
 import { getMyAgentInfo } from "../lib/wallet.js";
 import {
-  readConfig,
+  findSellerPid,
   isProcessRunning,
   removePidFromConfig,
   ROOT,
@@ -20,42 +20,6 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// -- Process discovery --
-
-function findSellerProcessFromOS(): number | undefined {
-  try {
-    const out = execSync(
-      'ps ax -o pid,command | grep "seller/runtime/seller.ts" | grep -v grep',
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    );
-    for (const line of out.trim().split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      const pid = parseInt(trimmed.split(/\s+/)[0], 10);
-      if (!isNaN(pid) && pid !== process.pid) {
-        return pid;
-      }
-    }
-  } catch {
-    // grep returns exit code 1 when no matches
-  }
-  return undefined;
-}
-
-function findSellerPid(): number | undefined {
-  const config = readConfig();
-
-  if (config.SELLER_PID !== undefined && isProcessRunning(config.SELLER_PID)) {
-    return config.SELLER_PID;
-  }
-
-  if (config.SELLER_PID !== undefined) {
-    removePidFromConfig();
-  }
-
-  return findSellerProcessFromOS();
-}
 
 // -- Start --
 

@@ -23,6 +23,7 @@ import {
   syncAgentsToConfig,
   type AgentInfoResponse,
 } from "../lib/auth.js";
+import { stopSellerIfRunning } from "./agent.js";
 
 // -- Helpers --
 
@@ -66,6 +67,13 @@ async function selectOrCreateAgent(
   rl: readline.Interface,
   sessionToken: string
 ): Promise<void> {
+  // Stop seller runtime if running (selecting/creating an agent changes the API key)
+  const proceed = await stopSellerIfRunning();
+  if (!proceed) {
+    output.log("  Setup cancelled.\n");
+    return;
+  }
+
   // Fetch agents from server
   output.log("\n  Fetching your agents...\n");
   let serverAgents: AgentInfoResponse[] = [];
