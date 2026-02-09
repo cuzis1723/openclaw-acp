@@ -514,29 +514,34 @@ function getProcessStatus(): { running: boolean; pid?: number } {
   return { running: false };
 }
 
-function getStatusLabel(isListed: boolean, processRunning: boolean): string {
-  if (isListed && processRunning) {
-    return "✅ Active (listed + process running)";
-  } else if (isListed && !processRunning) {
-    return "⚠️  Listed on ACP but process not running";
+function getStatusLabel(isListed: boolean): string {
+  if (isListed) {
+    return "✅ Listed on ACP";
   } else {
-    return "⏹  Delisted (local only)";
+    return "⏹  Local only";
   }
 }
 
-async function fetchAcpOfferingNames(): Promise<Set<string>> {
-  const names = new Set<string>();
+interface AcpOffering {
+  name: string;
+  priceV2?: { type: string; value: number };
+  requiredFunds?: boolean;
+}
+
+async function fetchAcpOfferings(): Promise<AcpOffering[]> {
   try {
     const agentInfo = await getMyAgentInfo();
-    for (const o of agentInfo.jobOfferings ?? []) {
-      names.add(o.name);
-    }
+    return agentInfo.jobs ?? [];
   } catch {
     console.log(
       "   ⚠️  Could not fetch ACP registration status (API error)\n"
     );
+    return [];
   }
-  return names;
+}
+
+function acpOfferingNames(acpOfferings: AcpOffering[]): Set<string> {
+  return new Set(acpOfferings.map((o) => o.name));
 }
 
 async function checkAll(): Promise<void> {
@@ -549,26 +554,37 @@ async function checkAll(): Promise<void> {
     console.log("   Status:  ⏹  Not running");
   }
 
-  const acpOfferingNames = await fetchAcpOfferingNames();
+  const acpOfferings = await fetchAcpOfferings();
+  const acpNames = acpOfferingNames(acpOfferings);
   const localOfferings = listLocalOfferings();
+  const localNames = new Set(localOfferings.map((o) => o.name));
 
   console.log("\n📦 Job Offerings");
   console.log("─".repeat(50));
 
-  if (localOfferings.length === 0) {
-    console.log("   No local offerings found in seller/offerings/\n");
+  if (localOfferings.length === 0 && acpOfferings.length === 0) {
+    console.log("   No offerings found.\n");
     return;
   }
 
   for (const offering of localOfferings) {
-    const isListed = acpOfferingNames.has(offering.name);
-    const statusLabel = getStatusLabel(isListed, status.running);
+    const isListed = acpNames.has(offering.name);
+    const statusLabel = getStatusLabel(isListed);
 
     console.log(`\n   ${offering.name}`);
     console.log(`     Description:    ${offering.description}`);
     console.log(`     Job Fee:        ${offering.jobFee} USDC`);
     console.log(`     Required Funds: ${offering.requiredFunds}`);
     console.log(`     Status:         ${statusLabel}`);
+  }
+
+  // Show ACP-only offerings (no local directory)
+  const acpOnly = acpOfferings.filter((o) => !localNames.has(o.name));
+  if (acpOnly.length > 0) {
+    console.log("\n   ⚠️  Listed on ACP but no local files:");
+    for (const o of acpOnly) {
+      console.log(`     - ${o.name}  (delist with: npm run offering:delete -- "${o.name}")`);
+    }
   }
 
   console.log("");
@@ -594,10 +610,10 @@ async function checkSingle(offeringName: string): Promise<void> {
     process.exit(1);
   }
 
-  const acpOfferingNames = await fetchAcpOfferingNames();
-  const isListed = acpOfferingNames.has(json.name);
+  const acpOfferings = await fetchAcpOfferings();
+  const isListed = acpOfferingNames(acpOfferings).has(json.name);
   const status = getProcessStatus();
-  const statusLabel = getStatusLabel(isListed, status.running);
+  const statusLabel = getStatusLabel(isListed);
 
   const handlers = detectHandlers(offeringName);
 

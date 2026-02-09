@@ -10,16 +10,27 @@ import * as output from "../lib/output.js";
 interface WalletBalance {
   network: string;
   symbol: string;
-  tokenAddress: string;
+  tokenAddress: string | null;
   tokenBalance: string;
   decimals: number;
-  tokenPrices: { usd: number }[];
+  tokenPrices: { currency: string; value: string }[];
   tokenMetadata: {
     decimals: number | null;
     logo: string | null;
     name: string | null;
     symbol: string | null;
   };
+}
+
+function formatBalance(hexBalance: string, decimals: number): string {
+  const raw = BigInt(hexBalance);
+  if (raw === 0n) return "0";
+  const divisor = 10n ** BigInt(decimals);
+  const whole = raw / divisor;
+  const remainder = raw % divisor;
+  if (remainder === 0n) return whole.toString();
+  const fracStr = remainder.toString().padStart(decimals, "0").replace(/0+$/, "");
+  return `${whole}.${fracStr}`;
 }
 
 export async function address(): Promise<void> {
@@ -59,14 +70,12 @@ export async function balance(): Promise<void> {
         output.log("  No tokens found.");
       }
       for (const t of tokens) {
-        const sym = t.tokenMetadata?.symbol || t.symbol || "???";
-        const name = t.tokenMetadata?.name || "";
-        const price =
-          t.tokenPrices?.[0]?.usd ??
-          (typeof t.tokenPrices?.[0] === "object" && "value" in t.tokenPrices[0]
-            ? t.tokenPrices[0].value
-            : "-");
-        output.log(`  ${sym.padEnd(8)} ${name.padEnd(20)} bal: ${t.tokenBalance}  price: $${price}`);
+        const sym = t.tokenMetadata?.symbol || t.symbol || (t.tokenAddress === null ? "ETH" : "???");
+        const name = t.tokenMetadata?.name || (t.tokenAddress === null ? "Ether" : "");
+        const decimals = t.tokenMetadata?.decimals ?? t.decimals ?? 18;
+        const bal = formatBalance(t.tokenBalance, decimals);
+        const price = t.tokenPrices?.[0]?.value ?? "-";
+        output.log(`  ${sym.padEnd(8)} ${name.padEnd(20)} ${bal.padStart(20)}    $${price}`);
       }
       output.log("");
     });

@@ -16,10 +16,10 @@ export const CONFIG_JSON_PATH = path.resolve(ROOT, "config.json");
 export const LOGS_DIR = path.resolve(ROOT, "logs");
 
 export interface AgentEntry {
-  name: string;
-  apiKey: string;
-  walletAddress: string;
   id: string;
+  name: string;
+  walletAddress: string;
+  apiKey?: string;   // only present for active/previously-switched agents
   active: boolean;
 }
 
@@ -131,24 +131,26 @@ export function getActiveAgent(): AgentEntry | undefined {
   return config.agents?.find((a) => a.active);
 }
 
-/** Switch the active agent by name. Returns true if the agent was found and activated. */
-export function setActiveAgent(name: string): boolean {
+/** Find an agent by name (case-insensitive). */
+export function findAgentByName(name: string): AgentEntry | undefined {
   const config = readConfig();
-  const agents = config.agents ?? [];
-  const target = agents.find(
+  return config.agents?.find(
     (a) => a.name.toLowerCase() === name.toLowerCase()
   );
-  if (!target) return false;
+}
 
-  const updated = agents.map((a) => ({
+/** Activate an agent with a (possibly new) API key. Updates active flags and LITE_AGENT_API_KEY. */
+export function activateAgent(agentId: string, apiKey: string): void {
+  const config = readConfig();
+  const agents = (config.agents ?? []).map((a) => ({
     ...a,
-    active: a.name === target.name,
+    active: a.id === agentId,
+    apiKey: a.id === agentId ? apiKey : a.apiKey,
   }));
 
   writeConfig({
     ...config,
-    agents: updated,
-    LITE_AGENT_API_KEY: target.apiKey,
+    agents,
+    LITE_AGENT_API_KEY: apiKey,
   });
-  return true;
 }

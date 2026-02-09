@@ -1,6 +1,6 @@
 // =============================================================================
 // acp agent list    — Show all agents (fetches from server, auto-login if needed)
-// acp agent switch  — Switch the active agent (local only)
+// acp agent switch  — Switch active agent (regenerates API key, auto-login if needed)
 // acp agent create  — Create a new agent (auto-login if needed)
 // =============================================================================
 
@@ -9,18 +9,20 @@ import {
   readConfig,
   writeConfig,
   getActiveAgent,
-  setActiveAgent,
+  findAgentByName,
+  activateAgent,
   type AgentEntry,
 } from "../lib/config.js";
 import {
   ensureSession,
   fetchAgents,
   createAgentApi,
+  regenerateApiKey,
   syncAgentsToConfig,
 } from "../lib/auth.js";
 
-function redactApiKey(key: string): string {
-  if (!key || key.length < 8) return "****";
+function redactApiKey(key: string | undefined): string {
+  if (!key || key.length < 8) return "(not available)";
   return `${key.slice(0, 4)}...${key.slice(-4)}`;
 }
 
@@ -30,13 +32,14 @@ function displayAgents(agents: AgentEntry[]): void {
     const marker = a.active ? output.colors.green(" (active)") : "";
     output.log(`  ${output.colors.bold(a.name)}${marker}`);
     output.log(`    ${output.colors.dim("Wallet")}  ${a.walletAddress}`);
-    output.log(`    ${output.colors.dim("API Key")} ${redactApiKey(a.apiKey)}`);
+    if (a.apiKey) {
+      output.log(`    ${output.colors.dim("API Key")} ${redactApiKey(a.apiKey)}`);
+    }
     output.log("");
   }
 }
 
 export async function list(): Promise<void> {
-  // Ensure session (auto-login if needed), then fetch from server
   const sessionToken = await ensureSession();
   let agents: AgentEntry[];
 
@@ -63,7 +66,6 @@ export async function list(): Promise<void> {
       name: a.name,
       id: a.id,
       walletAddress: a.walletAddress,
-      apiKey: redactApiKey(a.apiKey),
       active: a.active,
     })),
     () => displayAgents(agents)
@@ -75,24 +77,37 @@ export async function switchAgent(name: string): Promise<void> {
     output.fatal("Usage: acp agent switch <name>");
   }
 
-  const success = setActiveAgent(name);
-  if (!success) {
+  // Check the agent exists locally (must have run `agent list` at least once)
+  const target = findAgentByName(name);
+  if (!target) {
     const config = readConfig();
     const names = (config.agents ?? []).map((a) => a.name).join(", ");
     output.fatal(
-      `Agent "${name}" not found. Available: ${names || "(none)"}`
+      `Agent "${name}" not found. Run \`acp agent list\` first. Available: ${names || "(none)"}`
     );
   }
 
-  const active = getActiveAgent()!;
-  output.output(
-    { switched: true, name: active.name, walletAddress: active.walletAddress },
-    () => {
-      output.success(`Switched to agent: ${active.name}`);
-      output.log(`    Wallet:  ${active.walletAddress}`);
-      output.log(`    API Key: ${redactApiKey(active.apiKey)}\n`);
-    }
-  );
+  // Regenerate API key (requires auth)
+  const sessionToken = await ensureSession();
+
+  output.log(`  Switching to ${target.name}...\n`);
+  try {
+    const result = await regenerateApiKey(sessionToken, target.walletAddress);
+    activateAgent(target.id, result.apiKey);
+
+    output.output(
+      { switched: true, name: target.name, walletAddress: target.walletAddress },
+      () => {
+        output.success(`Switched to agent: ${target.name}`);
+        output.log(`    Wallet:  ${target.walletAddress}`);
+        output.log(`    API Key: ${redactApiKey(result.apiKey)} (regenerated)\n`);
+      }
+    );
+  } catch (e) {
+    output.fatal(
+      `Failed to switch agent: ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
 }
 
 export async function create(name: string): Promise<void> {
@@ -100,7 +115,6 @@ export async function create(name: string): Promise<void> {
     output.fatal("Usage: acp agent create <name>");
   }
 
-  // Ensure session (auto-login if needed), then create
   const sessionToken = await ensureSession();
 
   try {
@@ -114,12 +128,13 @@ export async function create(name: string): Promise<void> {
     const updatedAgents = (config.agents ?? []).map((a) => ({
       ...a,
       active: false,
+      apiKey: undefined, // clear other agents' keys
     }));
     const newAgent: AgentEntry = {
-      name: result.name || name,
-      apiKey: result.apiKey,
-      walletAddress: result.walletAddress,
       id: result.id,
+      name: result.name || name,
+      walletAddress: result.walletAddress,
+      apiKey: result.apiKey,
       active: true,
     };
     updatedAgents.push(newAgent);
@@ -136,7 +151,6 @@ export async function create(name: string): Promise<void> {
         name: newAgent.name,
         id: newAgent.id,
         walletAddress: newAgent.walletAddress,
-        apiKey: redactApiKey(newAgent.apiKey),
       },
       () => {
         output.success(`Agent created: ${newAgent.name}`);

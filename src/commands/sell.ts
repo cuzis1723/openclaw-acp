@@ -338,27 +338,53 @@ function listLocalOfferings(): LocalOffering[] {
     .filter((o): o is LocalOffering => o !== null);
 }
 
-async function fetchAcpOfferingNames(): Promise<Set<string>> {
-  const names = new Set<string>();
+interface AcpOffering {
+  name: string;
+  priceV2?: { type: string; value: number };
+  slaMinutes?: number;
+  requiredFunds?: boolean;
+}
+
+async function fetchAcpOfferings(): Promise<AcpOffering[]> {
   try {
     const agentInfo = await getMyAgentInfo();
-    for (const o of agentInfo.jobOfferings ?? []) {
-      names.add(o.name);
-    }
+    return agentInfo.jobs ?? [];
   } catch {
     // API error — can't determine ACP status
+    return [];
   }
-  return names;
+}
+
+function acpOfferingNames(acpOfferings: AcpOffering[]): Set<string> {
+  return new Set(acpOfferings.map((o) => o.name));
 }
 
 export async function list(): Promise<void> {
-  const acpNames = await fetchAcpOfferingNames();
+  const acpOfferings = await fetchAcpOfferings();
+  const acpNames = acpOfferingNames(acpOfferings);
   const localOfferings = listLocalOfferings();
+  const localNames = new Set(localOfferings.map((o) => o.name));
 
-  const data = localOfferings.map((o) => ({
+  const localData = localOfferings.map((o) => ({
     ...o,
     listed: acpNames.has(o.name),
+    acpOnly: false as const,
   }));
+
+  // ACP-only offerings: listed on ACP but no local directory
+  const acpOnlyData = acpOfferings
+    .filter((o) => !localNames.has(o.name))
+    .map((o) => ({
+      dirName: "",
+      name: o.name,
+      description: "",
+      jobFee: o.priceV2?.value ?? 0,
+      requiredFunds: o.requiredFunds ?? false,
+      listed: true,
+      acpOnly: true as const,
+    }));
+
+  const data = [...localData, ...acpOnlyData];
 
   output.output(data, (offerings) => {
     output.heading("Job Offerings");
@@ -369,12 +395,21 @@ export async function list(): Promise<void> {
     }
 
     for (const o of offerings) {
-      const status = o.listed ? "Listed" : "Local only";
+      const status = o.acpOnly
+        ? "Listed on ACP (no local files)"
+        : o.listed
+          ? "Listed"
+          : "Local only";
       output.log(`\n  ${o.name}`);
-      output.field("    Description", o.description);
+      if (!o.acpOnly) {
+        output.field("    Description", o.description);
+      }
       output.field("    Fee", `${o.jobFee} USDC`);
       output.field("    Funds required", String(o.requiredFunds));
       output.field("    Status", status);
+      if (o.acpOnly) {
+        output.log("    Tip: Run `acp sell delete " + o.name + "` to delist from ACP");
+      }
     }
     output.log("");
   });
@@ -415,8 +450,8 @@ export async function inspect(offeringName: string): Promise<void> {
   }
 
   const json = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-  const acpNames = await fetchAcpOfferingNames();
-  const isListed = acpNames.has(json.name);
+  const acpOfferings = await fetchAcpOfferings();
+  const isListed = acpOfferingNames(acpOfferings).has(json.name);
   const handlers = detectHandlers(offeringName);
 
   const data = {

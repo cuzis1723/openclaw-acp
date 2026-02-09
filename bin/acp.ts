@@ -177,12 +177,11 @@ Subcommands:
 acp agent — Manage multiple agents
 
 Subcommands:
-  list              Show all agents (fetches from server, auto-login if needed)
-  create <name>     Create a new agent (auto-login if needed)
-  switch <name>     Switch the active agent (local, no login needed)
+  list              Show all agents (fetches from server)
+  create <name>     Create a new agent
+  switch <name>     Switch active agent (regenerates API key)
 
-Each user can own multiple agents. If your session has expired,
-list and create will automatically prompt you to log in.
+All commands auto-prompt login if your session has expired.
 `,
 };
 

@@ -106,27 +106,35 @@ Step 3: Optional token launch (Y/n)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/auth/lite/auth-url` | None | Get OAuth login URL + requestId |
-| GET | `/api/auth/lite/auth-status?requestId=...` | None | Poll login completion → session token |
-| GET | `/api/agents/lite/keys` | Bearer session | List all agents for the authenticated user |
-| POST | `/api/agents/lite/key` | Bearer session | Create a new agent (name → id, apiKey, wallet) |
+| GET | `/api/auth/lite/auth-status?requestId=...` | None | Poll login completion → session token (JWT) |
+| GET | `/api/agents/lite` | Bearer session | List all agents (id, name, wallet — **no API keys**) |
+| POST | `/api/agents/lite/key` | Bearer session | Create a new agent (returns API key **once**) |
+| POST | `/api/agents/lite/key/:id/regenerate` | Bearer session | Regenerate API key for an agent (used on switch) |
+
+### Security Model
+
+- **API keys are never returned by the list endpoint** — only at creation or regeneration
+- **Switching agents regenerates the API key** — the old key is invalidated, a fresh one is issued
+- **Only the active agent's API key is stored locally** — other agents in config have no `apiKey`
+- **Session token expiry is read from the JWT `exp` claim** — no hardcoded TTL
 
 ### Multi-Agent Config (`config.json`)
 
 ```json
 {
-  "SESSION_TOKEN": { "token": "...", "expiry": "..." },
+  "SESSION_TOKEN": { "token": "eyJhbG..." },
   "LITE_AGENT_API_KEY": "apt_active_key_here",
   "agents": [
-    { "id": "1", "name": "AgentAlpha", "apiKey": "apt_...", "walletAddress": "0x...", "active": true },
-    { "id": "2", "name": "AgentBeta",  "apiKey": "apt_...", "walletAddress": "0x...", "active": false }
+    { "id": "1", "name": "AgentAlpha", "walletAddress": "0x...", "apiKey": "apt_...", "active": true },
+    { "id": "2", "name": "AgentBeta",  "walletAddress": "0x...", "active": false }
   ]
 }
 ```
 
-- `LITE_AGENT_API_KEY` always reflects the active agent's key (used by all other commands)
+- `LITE_AGENT_API_KEY` always reflects the active agent's key (used by all ACP commands)
+- `agents[].apiKey` is only present for the active agent (set during create or switch)
 - `agents[].active` tracks which agent is selected
-- `acp agent switch <name>` updates both the active flag and `LITE_AGENT_API_KEY`
-- Server sync happens during `acp setup` — merges by agent `id`, preserves local `active` flag
+- Server sync (`agent list`, `setup`) merges by agent `id`, preserves local `active` flag and `apiKey`
 
 ### Auto-Login (`ensureSession`)
 
@@ -233,7 +241,7 @@ openclaw-acp/
 - Update README.md
 - Add tsconfig.json for proper build
 - Multi-agent support:
-  - `GET /api/agents/lite/keys` — fetch user's agents from server after login
+  - `GET /api/agents/lite` — fetch user's agents from server after login
   - Server → local sync with deduplication by agent id
   - Setup flow: login → fetch agents → select existing or create new
   - `acp agent list` / `acp agent switch <name>` commands

@@ -10,17 +10,18 @@ import * as output from "../lib/output.js";
 import {
   readConfig,
   writeConfig,
+  activateAgent,
   ROOT,
   type AgentEntry,
 } from "../lib/config.js";
 import {
-  getValidSessionToken,
-  interactiveLogin,
   ensureSession,
+  interactiveLogin,
   fetchAgents,
   createAgentApi,
+  regenerateApiKey,
   syncAgentsToConfig,
-  type AgentKeyResponse,
+  type AgentInfoResponse,
 } from "../lib/auth.js";
 
 // -- Helpers --
@@ -67,7 +68,7 @@ async function selectOrCreateAgent(
 ): Promise<void> {
   // Fetch agents from server
   output.log("\n  Fetching your agents...\n");
-  let serverAgents: AgentKeyResponse[] = [];
+  let serverAgents: AgentInfoResponse[] = [];
   try {
     serverAgents = await fetchAgents(sessionToken);
   } catch (e) {
@@ -91,7 +92,6 @@ async function selectOrCreateAgent(
         `    ${output.colors.bold(`[${i + 1}]`)} ${a.name}${marker}`
       );
       output.log(`        Wallet:  ${a.walletAddress}`);
-      output.log(`        API Key: ${redactApiKey(a.apiKey)}`);
     }
     output.log(`    ${output.colors.bold(`[${agents.length + 1}]`)} Create a new agent\n`);
 
@@ -101,12 +101,19 @@ async function selectOrCreateAgent(
     const choiceNum = parseInt(choice, 10);
 
     if (choiceNum >= 1 && choiceNum <= agents.length) {
-      // Use existing agent
+      // Select existing agent — regenerate API key
       const selected = agents[choiceNum - 1];
-      activateAgent(selected);
-      output.success(`Active agent: ${selected.name}`);
-      output.log(`    Wallet:  ${selected.walletAddress}`);
-      output.log(`    API Key: ${redactApiKey(selected.apiKey)}\n`);
+      try {
+        const result = await regenerateApiKey(sessionToken, selected.walletAddress);
+        activateAgent(selected.id, result.apiKey);
+        output.success(`Active agent: ${selected.name}`);
+        output.log(`    Wallet:  ${selected.walletAddress}`);
+        output.log(`    API Key: ${redactApiKey(result.apiKey)} (regenerated)\n`);
+      } catch (e) {
+        output.error(
+          `Failed to activate agent: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
       return;
     }
     // Fall through to create new agent
@@ -132,12 +139,13 @@ async function selectOrCreateAgent(
     const updatedAgents = (config.agents ?? []).map((a) => ({
       ...a,
       active: false,
+      apiKey: undefined,
     }));
     const newAgent: AgentEntry = {
-      name: result.name || agentName,
-      apiKey: result.apiKey,
-      walletAddress: result.walletAddress,
       id: result.id,
+      name: result.name || agentName,
+      walletAddress: result.walletAddress,
+      apiKey: result.apiKey,
       active: true,
     };
     updatedAgents.push(newAgent);
@@ -156,20 +164,6 @@ async function selectOrCreateAgent(
       `Create agent failed: ${e instanceof Error ? e.message : String(e)}`
     );
   }
-}
-
-/** Set an agent as active in config. */
-function activateAgent(agent: AgentEntry): void {
-  const config = readConfig();
-  const agents = (config.agents ?? []).map((a) => ({
-    ...a,
-    active: a.id === agent.id,
-  }));
-  writeConfig({
-    ...config,
-    agents,
-    LITE_AGENT_API_KEY: agent.apiKey,
-  });
 }
 
 // =============================================================================
@@ -268,7 +262,7 @@ export async function whoami(): Promise<void> {
       output.field("API Key", redactApiKey(key!));
       output.field("Description", data.description || "(none)");
       output.field("Token", data.tokenAddress || "(none)");
-      output.field("Offerings", String(data.jobOfferings?.length ?? 0));
+      output.field("Offerings", String(data.jobs?.length ?? 0));
       if (agentCount > 1) {
         output.field("Saved Agents", String(agentCount));
         output.log(`\n  Use ${output.colors.cyan("acp agent list")} to see all agents.`);

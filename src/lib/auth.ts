@@ -26,11 +26,24 @@ export interface AuthStatusResponse {
   token: string;
 }
 
+/** Returned by list agents — no API key (never exposed after creation). */
+export interface AgentInfoResponse {
+  id: string;
+  name: string;
+  walletAddress: string;
+}
+
+/** Returned by create agent — API key shown once. */
 export interface AgentKeyResponse {
   id: string;
   name: string;
   apiKey: string;
   walletAddress: string;
+}
+
+/** Returned by regenerate — fresh API key for an existing agent. */
+export interface RegenerateKeyResponse {
+  apiKey: string;
 }
 
 // -- HTTP clients --
@@ -102,15 +115,15 @@ export async function getAuthStatus(requestId: string): Promise<AuthStatusRespon
 
 // -- Agent API --
 
-/** Fetch all agents belonging to the authenticated user. */
-export async function fetchAgents(sessionToken: string): Promise<AgentKeyResponse[]> {
+/** Fetch all agents belonging to the authenticated user. No API keys returned. */
+export async function fetchAgents(sessionToken: string): Promise<AgentInfoResponse[]> {
   const { data } = await apiClientWithSession(sessionToken).get<{
-    data: AgentKeyResponse[];
-  }>("/api/agents/lite/keys");
+    data: AgentInfoResponse[];
+  }>("/api/agents/lite");
   return data.data;
 }
 
-/** Create a new agent for the authenticated user. */
+/** Create a new agent for the authenticated user. API key returned once. */
 export async function createAgentApi(
   sessionToken: string,
   agentName: string
@@ -120,6 +133,17 @@ export async function createAgentApi(
   }>("/api/agents/lite/key", {
     data: { name: agentName.trim() },
   });
+  return data.data;
+}
+
+/** Regenerate the API key for an existing agent. Returns a fresh key. */
+export async function regenerateApiKey(
+  sessionToken: string,
+  walletAddress: string
+): Promise<RegenerateKeyResponse> {
+  const { data } = await apiClientWithSession(sessionToken).post<{
+    data: RegenerateKeyResponse;
+  }>(`/api/agents/lite/${walletAddress}/regenerate-api`);
   return data.data;
 }
 
@@ -210,29 +234,31 @@ export async function ensureSession(rl?: readline.Interface): Promise<string> {
 
 // -- Agent sync --
 
-/** Merge server agents into local config. Returns the merged list. */
-export function syncAgentsToConfig(serverAgents: AgentKeyResponse[]): AgentEntry[] {
+/**
+ * Merge server agents into local config. Returns the merged list.
+ * Server does NOT return API keys — only id, name, walletAddress.
+ * Local API keys (from create/regenerate) are preserved.
+ */
+export function syncAgentsToConfig(serverAgents: AgentInfoResponse[]): AgentEntry[] {
   const config = readConfig();
   const localAgents = config.agents ?? [];
 
-  const merged = new Map<string, AgentEntry>();
-
+  const localMap = new Map<string, AgentEntry>();
   for (const a of localAgents) {
-    merged.set(a.id, a);
+    localMap.set(a.id, a);
   }
 
-  for (const s of serverAgents) {
-    const existing = merged.get(s.id);
-    merged.set(s.id, {
+  const merged: AgentEntry[] = serverAgents.map((s) => {
+    const local = localMap.get(s.id);
+    return {
       id: s.id,
       name: s.name,
-      apiKey: s.apiKey,
       walletAddress: s.walletAddress,
-      active: existing?.active ?? false,
-    });
-  }
+      apiKey: local?.apiKey, // preserve local key if we have one
+      active: local?.active ?? false,
+    };
+  });
 
-  const agents = Array.from(merged.values());
-  writeConfig({ ...config, agents });
-  return agents;
+  writeConfig({ ...config, agents: merged });
+  return merged;
 }

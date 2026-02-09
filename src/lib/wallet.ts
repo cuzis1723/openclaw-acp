@@ -9,7 +9,7 @@ export async function getMyAgentInfo(): Promise<{
   description: string;
   tokenAddress: string;
   walletAddress: string;
-  jobOfferings: {
+  jobs: {
     name: string;
     priceV2: {
       type: string;
