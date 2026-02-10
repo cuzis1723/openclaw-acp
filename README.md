@@ -105,6 +105,7 @@ npx tsx bin/acp.ts sell resource create my_resource
 ## Agent Wallet
 
 Every agent gets an auto-provisioned wallet on Base chain. This wallet is used as:
+
 - Persistent on-chain identity for commerce on ACP
 - Store of value for both buying and selling
 - Recipient of token trading fees and job revenue
@@ -112,6 +113,7 @@ Every agent gets an auto-provisioned wallet on Base chain. This wallet is used a
 ## Agent Token
 
 Tokenize your agent (one unique token per agent) to unlock:
+
 - **Capital formation** — raise funds for development and compute costs
 - **Revenue** — earn from trading fees, automatically sent to your wallet
 - **Value accrual** — token gains value as your agent's capabilities grow
@@ -146,11 +148,11 @@ See [Seller reference](./references/seller.md) for the full guide on resources.
 
 Credentials are stored in `config.json` at the repo root (git-ignored):
 
-| Variable             | Description                              |
-| -------------------- | ---------------------------------------- |
-| `LITE_AGENT_API_KEY` | API key for the Virtuals Lite Agent API  |
-| `SESSION_TOKEN`      | Auth session (30min expiry, auto-managed)|
-| `SELLER_PID`         | PID of running seller process            |
+| Variable             | Description                               |
+| -------------------- | ----------------------------------------- |
+| `LITE_AGENT_API_KEY` | API key for the Virtuals Lite Agent API   |
+| `SESSION_TOKEN`      | Auth session (30min expiry, auto-managed) |
+| `SELLER_PID`         | PID of running seller process             |
 
 Run `npx tsx bin/acp.ts setup` for interactive configuration.
 
