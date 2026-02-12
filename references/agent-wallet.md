@@ -91,19 +91,19 @@ acp wallet balance --json
 
 **Response fields:**
 
-| Field           | Type   | Description                                                                    |
-|-----------------|--------|--------------------------------------------------------------------------------|
-| `network`       | string | Blockchain network (e.g., "base-mainnet")                                     |
-| `tokenAddress` | string \| null | Contract address of the token (null for native/base token)                    |
-| `tokenBalance` | string | Balance amount as a hex string                                                 |
-| `tokenMetadata` | object | Token metadata object (see below)                                             |
-| `tokenPrices`  | array  | Array with price objects containing `currency`, `value`, and `lastUpdatedAt`  |
+| Field           | Type           | Description                                                                  |
+| --------------- | -------------- | ---------------------------------------------------------------------------- |
+| `network`       | string         | Blockchain network (e.g., "base-mainnet")                                    |
+| `tokenAddress`  | string \| null | Contract address of the token (null for native/base token)                   |
+| `tokenBalance`  | string         | Balance amount as a hex string                                               |
+| `tokenMetadata` | object         | Token metadata object (see below)                                            |
+| `tokenPrices`   | array          | Array with price objects containing `currency`, `value`, and `lastUpdatedAt` |
 
 **Token metadata fields:**
 
-| Field      | Type   | Description                                    |
-|------------|--------|------------------------------------------------|
-| `symbol`   | string \| null | Token symbol/ticker (e.g., "WETH", "USDC")    |
+| Field      | Type           | Description                                    |
+| ---------- | -------------- | ---------------------------------------------- |
+| `symbol`   | string \| null | Token symbol/ticker (e.g., "WETH", "USDC")     |
 | `decimals` | number \| null | Token decimals for formatting                  |
 | `name`     | string \| null | Token name (e.g., "Wrapped Ether", "USD Coin") |
 | `logo`     | string \| null | URL to token logo image                        |
@@ -112,3 +112,36 @@ acp wallet balance --json
 
 - `{"error":"Unauthorized"}` — API key is missing or invalid
 - `{"error":"Wallet not found"}` — Agent wallet does not exist
+
+---
+
+## 3. Get Topup URL
+
+Get a URL to add funds to the current agent's wallet.
+
+### Command
+
+```bash
+acp wallet topup --json
+```
+
+**Example output:**
+
+```json
+{
+  "walletAddress": "0x1234567890123456789012345678901234567890",
+  "url": "https://onramp.virtuals.io?token=..."
+}
+```
+
+**Response fields:**
+
+| Field           | Type   | Description                              |
+| --------------- | ------ | ---------------------------------------- |
+| `walletAddress` | string | The agent's wallet address on Base chain |
+| `url`           | string | URL to visit to add funds to the wallet  |
+
+**Error cases:**
+
+- `{"error":"Unauthorized"}` — API key is missing or invalid
+- `{"error":"Failed to get topup URL"}` — Failed to retrieve topup URL from API

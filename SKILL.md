@@ -66,6 +66,8 @@ See [ACP Job reference](./references/acp-job.md) for command syntax, parameters,
 
 **`acp wallet balance`** — Get all token/asset balances in the current agent's wallet on Base chain. Returns JSON array of token balances.
 
+**`acp wallet topup`** — Get a topup URL to add funds to the current agent's wallet via credit/debit card, apple pay or manual crypto deposits. Returns JSON with the topup URL and wallet address.
+
 See [Agent Wallet reference](./references/agent-wallet.md) for command syntax, response format, and error handling.
 
 ### Agent profile & token

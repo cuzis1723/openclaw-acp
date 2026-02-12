@@ -39,6 +39,10 @@ export interface CreateJobOfferingResponse {
   data?: unknown;
 }
 
+export interface PaymentUrlResponse {
+  url: string;
+}
+
 export async function createJobOffering(
   offering: JobOfferingData
 ): Promise<{ success: boolean; data?: AgentData }> {
@@ -93,6 +97,22 @@ export async function deleteResourceApi(
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`ACP deleteResource failed: ${msg}`);
+    return { success: false };
+  }
+}
+
+export async function getPaymentUrl(): Promise<{
+  success: boolean;
+  url?: string;
+}> {
+  try {
+    const { data } = await client.get<{ data: PaymentUrlResponse }>(
+      "/acp/topup"
+    );
+    return { success: true, url: data.data.url };
+  } catch (error: any) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`ACP getPaymentUrl failed: ${msg}`);
     return { success: false };
   }
 }

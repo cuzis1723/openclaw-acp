@@ -5,23 +5,38 @@
 import client from "../lib/client.js";
 import * as output from "../lib/output.js";
 
+interface JobOffering {
+  name: string;
+  description?: string;
+  price: number;
+  priceType: string;
+  requiredFunds?: boolean;
+  requirement: Record<string, unknown> | string;
+  [key: string]: unknown;
+}
+
+interface Resource {
+  name: string;
+  description?: string;
+  url?: string;
+  params?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 interface Agent {
   id: string;
   name: string;
   walletAddress: string;
   description: string;
-  jobOfferings: {
-    name: string;
-    price: number;
-    priceType: string;
-    requirement: string;
-  }[];
-  resources: {
-    name: string;
-    description: string;
-    url: string;
-    params: Record<string, any>;
-  }[];
+  jobOfferings?: JobOffering[];
+  resources?: Resource[];
+  [key: string]: unknown;
+}
+
+function formatPrice(price: number, priceType?: string): string {
+  if (priceType === "fixed") return `${price} USDC`;
+  if (priceType === "percentage") return `${(price * 100).toFixed(1)}%`;
+  return String(price);
 }
 
 export async function browse(query: string): Promise<void> {
@@ -38,40 +53,56 @@ export async function browse(query: string): Promise<void> {
       output.fatal("No agents found.");
     }
 
-    const formatted = agents.data.data.map((agent) => ({
-      id: agent.id,
-      name: agent.name,
-      walletAddress: agent.walletAddress,
-      description: agent.description,
-      jobOfferings: (agent.jobOfferings || []).map((job) => ({
-        name: job.name,
-        price: job.price,
-        priceType: job.priceType,
-        requirement: job.requirement,
-      })),
-      resources: agent.resources || [],
-    }));
+    const data = agents.data.data;
 
-    output.output(formatted, (agents) => {
+    output.output(data, (agents) => {
       output.heading(`Agents matching "${query}"`);
       for (const agent of agents) {
         output.log(`\n  ${agent.name}`);
         output.field("  Wallet", agent.walletAddress);
-        output.field("  Description", agent.description);
-        if (agent.jobOfferings.length > 0) {
+        if (agent.description) {
+          output.field("  Description", agent.description);
+        }
+
+        const offerings = agent.jobOfferings || [];
+        if (offerings.length > 0) {
           output.log("    Offerings:");
-          for (const o of agent.jobOfferings) {
-            output.log(`      - ${o.name} (${o.price} ${o.priceType})`);
+          for (const o of offerings) {
+            const fee = formatPrice(o.price, o.priceType);
+            const funds = o.requiredFunds ? " [requires funds]" : "";
+            output.log(`      - ${o.name} (${fee}${funds})`);
+            if (o.description) {
+              output.log(`        ${o.description}`);
+            }
+            if (o.requirement) {
+              const req =
+                typeof o.requirement === "string"
+                  ? o.requirement
+                  : JSON.stringify(o.requirement, null, 2)
+                      .split("\n")
+                      .join("\n          ");
+              output.log(`        Requirement: ${req}`);
+            }
           }
         }
-        if (agent.resources.length > 0) {
+
+        const resources = agent.resources || [];
+        if (resources.length > 0) {
           output.log("    Resources:");
-          for (const r of agent.resources) {
-            output.log(
-              `      - ${r.name} ${
-                r.description ? `(${r.description})` : ""
-              } (${r.url}) ${r.params ? JSON.stringify(r.params) : ""}`
-            );
+          for (const r of resources) {
+            output.log(`      - ${r.name}`);
+            if (r.description) {
+              output.log(`        ${r.description}`);
+            }
+            if (r.url) {
+              output.log(`        URL: ${r.url}`);
+            }
+            if (r.params) {
+              const params = JSON.stringify(r.params, null, 2)
+                .split("\n")
+                .join("\n          ");
+              output.log(`        Params: ${params}`);
+            }
           }
         }
       }

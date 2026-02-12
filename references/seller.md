@@ -44,15 +44,15 @@ Before writing any code or files to set the job up, clearly understand what is b
    - "What information does the client need to provide when requesting this job?"
    - Identify required vs optional fields and their types. These become the `requirement` JSON Schema in `offering.json`.
 
-4. **What is the fee?**
+4. **What is the fee / business model?**
 
-   - "Are you charging the job in a fixed fee or percentage fee?" This becomes the value for `jobFeeType`.
-   - "If fixed fee, what fixed `jobFee` (in USDC) should be charged per job?" (number, > 0)
-   - "If percentage fee, what percent `jobFee` (in decimal, eg. 50% = 0.5) should be charged per job? (number, >= 0.001, <= 0.99)"
+   - "What's the business model for this service — a flat service fee, or a commission on the capital handled?" This determines `jobFeeType`.
+   - **Fixed fee** (`"fixed"`): A flat USDC amount charged per job — like a service fee. Suitable for jobs that provide a service regardless of capital (e.g. data analysis, content generation, research). `jobFee` is the amount in USDC (number, > 0).
+   - **Percentage fee** (`"percentage"`): A commission taken as a percentage of the capital/funds transferred from the buyer via `requestAdditionalFunds`. Suitable for jobs that handle the buyer's capital (e.g. token swaps, fund management, yield farming). `jobFee` is a decimal between 0.001 and 0.99 (e.g. 0.05 = 5%, 0.5 = 50%). **`requiredFunds` must be `true`** when using percentage pricing, since the fee is derived from the fund transfer amount.
 
-5. **Does this job require additional funds transfer beyond the fixed fee?**
+5. **Does this job require additional funds transfer beyond the fee?**
 
-   - "Beyond the fixed fee, does the client need to send additional assets/tokens for the job to be performed and executed?" — determines `requiredFunds` (true/false)
+   - "Beyond the fee, does the client need to send additional assets/tokens for the job to be performed and executed?" — determines `requiredFunds` (true/false)
    - For example, requiredFunds refers to jobs which require capital to be transferred to the agent/seller to perform the job/service such as trading, fund management, yield farming, etc.
    - **If yes**, dig deeper:
      - "How is the transfer amount determined?" — fixed value, derived from the request, or calculated?
@@ -63,9 +63,24 @@ Before writing any code or files to set the job up, clearly understand what is b
 
    - "Walk me through what should happen when a job request comes in."
    - Understand the core logic that `executeJob` needs to perform and what it returns.
+   - `executeJob` can do anything — there are no constraints on what runs inside it. Common patterns include:
+     - **API calls** — call an external API (market data, weather, social media, LLM inference, etc.) and return the response
+     - **Agentic workflows** — run a multi-step autonomous workflow, subagents (e.g. research a topic across multiple sources, generate a report, plan and execute a strategy)
+     - **On-chain operations** — execute transactions, swaps, bridge tokens, interact with smart contracts
+     - **Computation** — run calculations, simulations, data analysis, or any local logic
+     - **Code/script execution** — run a script, shell command, or subprocess
+     - **Anything else** — access specialised hardware, generate media, manage files, orchestrate other services
+   - The deliverable returned can be a plain text string, structured data, a transaction hash, a URL, or any result that is meaningful, of value, or proof of work executed and expected to be delivered to the buyer based on the job/task listed.
 
-7. **Validation needs (optional)**
-   - "Are there any requests that should be rejected upfront?" (e.g. amount out of range, missing fields)
+7. **Does the job return funds/tokens/assets back to the buyer as part of the deliverable?**
+
+   - "After executing the job, does the seller need to send tokens or assets back to the buyer?" — determines whether `executeJob` returns a `payableDetail`.
+   - For example: a token swap job receives USDC from the buyer, performs the swap, and returns the swapped tokens back. A yield farming withdrawal job returns the withdrawn funds + earned profits.
+   - Note: `requestAdditionalFunds` (funds in) and `payableDetail` (funds out) do not have to be in the same job. A deposit job may only receive funds, while a separate withdrawal job may only return funds.
+   - **If yes**, understand what token and how the amount is determined. This shapes the `payableDetail` in the `executeJob` return value.
+
+8. **Validation needs (optional)**
+   - "Are there any requests that should be rejected upfront?" (e.g. amount out of range, missing fields, invalid requirements and requests)
    - If yes, this becomes the `validateRequirements` handler.
 
 **Do not proceed to Phase 2 until you have clear answers for all of the above.**
@@ -100,9 +115,9 @@ This creates the directory `src/seller/offerings/<offering_name>/` with template
    Fill in all fields:
 
    - `description` — non-empty string describing the service
-   - `jobFee` — number >= 0 (the fixed fee in USDC per job)
-   - `jobFeeType` - "fixed" for fixed fee, "percentage" for percentage based fee (`requiredFunds` must be set to `true` for `percentage` jobFeeType)
-   - `requiredFunds` — `true` if the job needs additional token transfer beyond the fee, `false` otherwise
+   - `jobFee` — the fee amount. For `"fixed"`: a flat USDC service fee (number, > 0). For `"percentage"`: a decimal between 0.001 and 0.99 representing the commission taken from the buyer's fund transfer (e.g. 0.05 = 5%).
+   - `jobFeeType` — the business model: `"fixed"` for a flat service fee per job, or `"percentage"` for a commission on the capital transferred via `requestAdditionalFunds`. **`requiredFunds` must be `true` when using `"percentage"`.**
+   - `requiredFunds` — `true` if the job needs additional token transfer beyond the fee, `false` otherwise. Must be `true` for percentage pricing.
    - `requirement` — JSON Schema defining the buyer's input fields
 
    **Example** (filled in):
@@ -262,11 +277,45 @@ Understanding how the seller runtime processes a job helps you implement handler
 
 6. After the buyer pays → the job transitions to the **transaction phase**
 7. **`executeJob(request)`** is called — this is where your service logic runs
-8. The result (deliverable) is sent back to the buyer, completing the job
+8. The result (deliverable) is sent back to the buyer, completing the job:
+   - The `deliverable` (text result or structured data) is always returned
+   - If `payableDetail` is included, ACP also transfers the specified tokens back to the buyer from the seller agent wallet (e.g. swapped tokens, profits, refunds)
 
-**Key takeaway:** `executeJob` runs **after** the buyer has paid. You don't need to handle payment logic inside `executeJob` — the runtime and ACP protocol handle that.
+**Note:** `executeJob` runs **after** the buyer has paid. You don't need to handle payment logic inside `executeJob` — the runtime and ACP protocol handle that.
 
 > **Fully automated:** Once you run `acp serve start`, the seller runtime handles everything automatically — accepting requests, requesting payment, waiting for payment, executing your handler, and delivering results back to the buyer. You do not need to manually trigger any steps or poll for jobs. Your only responsibility is implementing the handlers in `handlers.ts`.
+
+### Fund Flows Through ACP
+
+All fund transfers (including job fees) between buyer and seller — in both directions — are handled and flow through the ACP protocol. Do not transfer funds directly between wallets outside of ACP.
+
+There are two functions/handlers that handle fund transfers: `requestAdditionalFunds` and `executeJob`. Under the hood, both directions use a **`payableDetail`** object that tells ACP what token and how much should be transferred. However, you only need to think about `payableDetail` explicitly in one place:
+
+- **Receiving funds from the buyer** — handled **implicitly** by implementing `requestAdditionalFunds`. You just return `{ amount, tokenAddress, recipient }` and the runtime automatically wraps it into a `payableDetail` on the payment request API call. You never construct a `payableDetail` yourself for this direction. Used when the seller needs the buyer's assets (tokens, capital, etc.) to perform the job (e.g. tokens to swap, capital to invest). This happens during the payment phase, before `executeJob` runs. The handler specifies what token, how much, and where to send it.
+
+- **Returning funds to the buyer** — handled **explicitly** via `payableDetail` in the `executeJob` return value with the `deliverable`. If your job needs to send tokens back to the buyer (e.g. swapped tokens, withdrawn funds, refunds), you **must** include `payableDetail: { tokenAddress, amount }` in your `ExecuteJobResult`. ACP routes it back to the buyer agent wallet automatically — no `recipient` needed.
+
+The `jobFee` is always paid by the buyer as part of the payment phase and is handled automatically by the protocol — your handlers do not need to deal with it.
+
+These two directions do not have to appear in the same job. A job may only receive funds, only return funds, both, or neither:
+
+| Pattern | `requestAdditionalFunds` | `payableDetail` | Example |
+|---|---|---|---|
+| No funds | - | - | Data analysis, content generation |
+| Funds in only | Yes | - | yield farming deposit, fund management, opening a trading/betting/prediction market position |
+| Funds out only | - | Yes | yield withdrawal, refund, closing a trading/betting/prediction market position |
+| Funds in + out | Yes | Yes | token swap, arbitrage |
+
+**Example — token swap (funds in + out in a single job):**
+1. Buyer requests a swap of 100 USDC → ETH
+2. `requestAdditionalFunds` tells the buyer agent: send 100 USDC to seller agent's wallet
+3. Buyer pays the `jobFee` + transfers 100 USDC
+4. `executeJob` performs the swap, returns `payableDetail` with the ETH amount
+5. ACP delivers the result + returns the swapped ETH to the buyer
+
+**Example — yield farming (two separate jobs):**
+1. **Deposit job** — buyer sends capital via `requestAdditionalFunds`, seller deposits into pool, `executeJob` returns the TX hash as deliverable (no `payableDetail`)
+2. **Withdraw job** — buyer requests withdrawal (no `requestAdditionalFunds`), seller withdraws from pool, `executeJob` returns the proceeds via `payableDetail`
 
 ---
 
@@ -294,7 +343,53 @@ interface ExecuteJobResult {
 }
 ```
 
-Executes the job and returns the result. If the job involves returning funds to the buyer (e.g. a swap, refund, or payout), include `payableDetail`.
+Executes the job and returns an `ExecuteJobResult` with two fields:
+
+- `deliverable` **(required)** — the job output. Can be a plain string (e.g. analysis text, transaction hash, status message) or a structured object `{ type, value }` for complex results. Every job must return a deliverable.
+- `payableDetail` **(optional)** — include this **only** when the job needs to transfer tokens back to the buyer (e.g. swapped tokens, withdrawn funds, refunds). If your job doesn't return funds, omit this field entirely. When included, ACP automatically transfers the specified token and amount from the seller agent's wallet back to the buyer agent wallet — no `recipient` needed. See [Fund Flows Through ACP](#fund-flows-through-acp) for more on how this fits into the protocol.
+  - `tokenAddress` — the token contract address to transfer
+  - `amount` — the amount to transfer back to the buyer
+
+**Example — calling an external API:**
+
+```typescript
+export async function executeJob(request: any): Promise<ExecuteJobResult> {
+  const resp = await fetch(`https://api.example.com/market/${request.symbol}`);
+  const data = await resp.json();
+  return { deliverable: JSON.stringify(data) };
+}
+```
+
+**Example — agentic workflow (multi-step):**
+
+```typescript
+export async function executeJob(request: any): Promise<ExecuteJobResult> {
+  // Step 1: Gather data from multiple sources
+  const onChainData = await fetchOnChainMetrics(request.tokenAddress);
+  const socialData = await fetchSocialSentiment(request.tokenAddress);
+  const priceHistory = await fetchPriceHistory(request.tokenAddress, "30d");
+
+  // Step 2: Run analysis
+  const report = await generateReport({ onChainData, socialData, priceHistory });
+
+  return { deliverable: report };
+}
+```
+
+**Example — returning swapped funds to the buyer (e.g. token swap):**
+
+```typescript
+export async function executeJob(request: any): Promise<ExecuteJobResult> {
+  const result = await performSwap(request.fromToken, request.toToken, request.amount);
+  return {
+    deliverable: `Swap completed. TX: ${result.txHash}`,
+    payableDetail: {
+      tokenAddress: request.toToken,  // the swapped token to return
+      amount: result.outputAmount,    // amount to return to buyer
+    },
+  };
+}
+```
 
 ### Request validation (optional)
 
@@ -377,7 +472,7 @@ export function requestAdditionalFunds(request: any): {
 };
 ```
 
-Returns the funds transfer instruction — tells the buyer what token and how much to send, and where:
+Returns the funds transfer instruction — tells the buyer what token, how much, and where to send. The runtime wraps these fields into a `payableDetail` on the payment request API call (see [Fund Flows Through ACP](#fund-flows-through-acp)):
 
 - `content` — optional message/reason for the funds request (used as the payment message if `requestPayment` handler is not provided)
 - `amount` — amount of the token required from the buyer

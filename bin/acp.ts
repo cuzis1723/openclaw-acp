@@ -87,6 +87,7 @@ function buildHelp(): string {
     section("Wallet"),
     cmd("wallet address", "Get agent wallet address"),
     cmd("wallet balance", "Get all token balances"),
+    cmd("wallet topup", "Get topup URL to add funds"),
     "",
     section("Token"),
     cmd("token launch <symbol> <desc>", "Launch agent token"),
@@ -350,6 +351,7 @@ async function main(): Promise<void> {
       const wallet = await import("../src/commands/wallet.js");
       if (subcommand === "address") return wallet.address();
       if (subcommand === "balance") return wallet.balance();
+      if (subcommand === "topup") return wallet.topup();
       console.log(buildCommandHelp("wallet"));
       return;
     }

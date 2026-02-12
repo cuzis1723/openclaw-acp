@@ -1,11 +1,13 @@
 // =============================================================================
 // acp wallet address — Get wallet address
 // acp wallet balance — Get token balances
+// acp wallet topup — Get topup URL
 // =============================================================================
 
-import client from "../lib/client.js";
+import { getPaymentUrl } from "../lib/api.js";
 import { getMyAgentInfo } from "../lib/wallet.js";
 import * as output from "../lib/output.js";
+import client from "../lib/client.js";
 
 interface WalletBalance {
   network: string;
@@ -29,7 +31,10 @@ function formatBalance(hexBalance: string, decimals: number): string {
   const whole = raw / divisor;
   const remainder = raw % divisor;
   if (remainder === 0n) return whole.toString();
-  const fracStr = remainder.toString().padStart(decimals, "0").replace(/0+$/, "");
+  const fracStr = remainder
+    .toString()
+    .padStart(decimals, "0")
+    .replace(/0+$/, "");
   return `${whole}.${fracStr}`;
 }
 
@@ -43,7 +48,9 @@ export async function address(): Promise<void> {
     });
   } catch (e) {
     output.fatal(
-      `Failed to get wallet address: ${e instanceof Error ? e.message : String(e)}`
+      `Failed to get wallet address: ${
+        e instanceof Error ? e.message : String(e)
+      }`
     );
   }
 }
@@ -70,18 +77,53 @@ export async function balance(): Promise<void> {
         output.log("  No tokens found.");
       }
       for (const t of tokens) {
-        const sym = t.tokenMetadata?.symbol || t.symbol || (t.tokenAddress === null ? "ETH" : "???");
-        const name = t.tokenMetadata?.name || (t.tokenAddress === null ? "Ether" : "");
+        const sym =
+          t.tokenMetadata?.symbol ||
+          t.symbol ||
+          (t.tokenAddress === null ? "ETH" : "???");
+        const name =
+          t.tokenMetadata?.name || (t.tokenAddress === null ? "Ether" : "");
         const decimals = t.tokenMetadata?.decimals ?? t.decimals ?? 18;
         const bal = formatBalance(t.tokenBalance, decimals);
         const price = t.tokenPrices?.[0]?.value ?? "-";
-        output.log(`  ${sym.padEnd(8)} ${name.padEnd(20)} ${bal.padStart(20)}    $${price}`);
+        output.log(
+          `  ${sym.padEnd(8)} ${name.padEnd(20)} ${bal.padStart(
+            20
+          )}    $${price}`
+        );
       }
       output.log("");
     });
   } catch (e) {
     output.fatal(
-      `Failed to get wallet balance: ${e instanceof Error ? e.message : String(e)}`
+      `Failed to get wallet balance: ${
+        e instanceof Error ? e.message : String(e)
+      }`
+    );
+  }
+}
+
+export async function topup(): Promise<void> {
+  try {
+    const info = await getMyAgentInfo();
+    const result = await getPaymentUrl();
+
+    if (!result.success || !result.url) {
+      output.fatal("Failed to get topup URL.");
+    }
+
+    output.output(
+      { url: result.url, walletAddress: info.walletAddress },
+      (data) => {
+        output.heading("Wallet Topup");
+        output.field("Wallet Address", data.walletAddress);
+        output.field("Topup URL", data.url);
+        output.log("\n  Visit the URL above to add funds to your wallet.\n");
+      }
+    );
+  } catch (e) {
+    output.fatal(
+      `Failed to get topup URL: ${e instanceof Error ? e.message : String(e)}`
     );
   }
 }
