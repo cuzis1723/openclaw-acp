@@ -101,7 +101,15 @@ function buildHelp(): string {
     cmd("profile update profilePic <url>", "Update agent profile picture"),
     "",
     section("Marketplace"),
-    cmd("browse <query>", "Search agents on the marketplace"),
+    cmd("search <query>", "Search agents with filters & reranking"),
+    flag("--mode <hybrid|vector|keyword>", "Search strategy (default: hybrid)"),
+    flag("--online / --no-online", "Filter by online status (default: on)"),
+    flag("--graduated / --no-graduated", "Filter by graduation (default: on)"),
+    flag("--high-risk / --no-high-risk", "Filter by high-risk flag"),
+    flag("--cluster <name>", "Filter by cluster name"),
+    flag("--contains <text>", "Keep results containing these terms"),
+    flag("--match <all|any>", "Term matching for --contains (default: all)"),
+    cmd("browse <query>", "Quick agent search (simple)"),
     "",
     cmd("job create <wallet> <offering>", "Start a job with an agent"),
     flag("--requirements '<json>'", "Service requirements (JSON)"),
@@ -170,6 +178,38 @@ function buildCommandHelp(command: string): string | undefined {
       "",
     ].join("\n"),
 
+    search: () => [
+      "",
+      `  ${bold("acp search <query>")} ${dim("— Search agents with filters & reranking")}`,
+      "",
+      `  ${cyan("Search Mode")}`,
+      flag("--mode <hybrid|vector|keyword>", "Search strategy (default: hybrid)"),
+      "",
+      `  ${cyan("Filters")}`,
+      flag("--online / --no-online", "Filter by online status (default: on)"),
+      flag("--graduated / --no-graduated", "Filter by graduation (default: on)"),
+      flag("--high-risk / --no-high-risk", "Filter by high-risk flag"),
+      flag("--cluster <name>", "Filter by cluster name"),
+      flag("--contains <text>", "Keep results containing these terms"),
+      flag("--match <all|any>", "Term matching for --contains (default: all)"),
+      "",
+      `  ${cyan("Reranking")}`,
+      flag("--no-rerank", "Disable reranking (default: on)"),
+      flag("--performance-weight <0-1>", "Performance vs semantic weight (default: 0.97)"),
+      flag("--similarity-cutoff <0-1>", "Min vector similarity score (default: 0.42)"),
+      flag("--sparse-cutoff <float>", "Min keyword score (default: 0.0)"),
+      "",
+      `  ${dim("Defaults: mode=hybrid, online=true, graduated=true, rerank=on (weight=0.97)")}`,
+      "",
+      `  ${dim("Examples:")}`,
+      `    acp search "trading"`,
+      `    acp search "memes" --online --mode vector`,
+      `    acp search "data analysis" --graduated --no-high-risk`,
+      `    acp search "content" --contains "image generation" --match any`,
+      `    acp search "trading" --performance-weight 0.5`,
+      "",
+    ].join("\n"),
+
     browse: () => [
       "",
       `  ${bold("acp browse <query>")} ${dim("— Search and discover agents")}`,
@@ -178,6 +218,8 @@ function buildCommandHelp(command: string): string | undefined {
       `    acp browse "trading"`,
       `    acp browse "data analysis"`,
       `    acp browse "content generation" --json`,
+      "",
+      `  ${dim("Tip: use")} ${bold("acp search")} ${dim("for advanced filtering and reranking.")}`,
       "",
     ].join("\n"),
 
@@ -317,6 +359,78 @@ async function main(): Promise<void> {
       console.log(buildHelp());
     }
     return;
+  }
+
+  // Search uses external API — no API key required
+  if (command === "search") {
+    const { search } = await import("../src/commands/search.js");
+    let searchArgs = [subcommand, ...rest].filter(Boolean);
+
+    // Parse search options
+    const mode = getFlagValue(searchArgs, "--mode") as
+      | "hybrid"
+      | "vector"
+      | "keyword"
+      | undefined;
+    searchArgs = removeFlagWithValue(searchArgs, "--mode");
+
+    const cluster = getFlagValue(searchArgs, "--cluster");
+    searchArgs = removeFlagWithValue(searchArgs, "--cluster");
+
+    const contains = getFlagValue(searchArgs, "--contains");
+    searchArgs = removeFlagWithValue(searchArgs, "--contains");
+
+    const matchVal = getFlagValue(searchArgs, "--match") as
+      | "all"
+      | "any"
+      | undefined;
+    searchArgs = removeFlagWithValue(searchArgs, "--match");
+
+    const perfWeight = getFlagValue(searchArgs, "--performance-weight");
+    searchArgs = removeFlagWithValue(searchArgs, "--performance-weight");
+
+    const simCutoff = getFlagValue(searchArgs, "--similarity-cutoff");
+    searchArgs = removeFlagWithValue(searchArgs, "--similarity-cutoff");
+
+    const sparCutoff = getFlagValue(searchArgs, "--sparse-cutoff");
+    searchArgs = removeFlagWithValue(searchArgs, "--sparse-cutoff");
+
+    // Boolean flags
+    let online: boolean | undefined;
+    if (hasFlag(searchArgs, "--online")) online = true;
+    else if (hasFlag(searchArgs, "--no-online")) online = false;
+    searchArgs = removeFlags(searchArgs, "--online", "--no-online");
+
+    let graduated: boolean | undefined;
+    if (hasFlag(searchArgs, "--graduated")) graduated = true;
+    else if (hasFlag(searchArgs, "--no-graduated")) graduated = false;
+    searchArgs = removeFlags(searchArgs, "--graduated", "--no-graduated");
+
+    let highRisk: boolean | undefined;
+    if (hasFlag(searchArgs, "--high-risk")) highRisk = true;
+    else if (hasFlag(searchArgs, "--no-high-risk")) highRisk = false;
+    searchArgs = removeFlags(searchArgs, "--high-risk", "--no-high-risk");
+
+    let rerank: boolean | undefined;
+    if (hasFlag(searchArgs, "--no-rerank")) rerank = false;
+    searchArgs = removeFlags(searchArgs, "--no-rerank");
+
+    // Remaining args (non-flags) form the query
+    const query = searchArgs.filter((a) => a && !a.startsWith("-")).join(" ");
+
+    return search(query, {
+      mode,
+      online,
+      graduated,
+      highRisk,
+      cluster,
+      contains,
+      match: matchVal,
+      rerank,
+      performanceWeight: perfWeight !== undefined ? parseFloat(perfWeight) : undefined,
+      similarityCutoff: simCutoff !== undefined ? parseFloat(simCutoff) : undefined,
+      sparseCutoff: sparCutoff !== undefined ? parseFloat(sparCutoff) : undefined,
+    });
   }
 
   // All other commands need API key
