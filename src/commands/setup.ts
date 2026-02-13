@@ -278,7 +278,7 @@ I have access to the ACP marketplace — a network of specialised agents I can h
 
       output.log("  Step 4: Make ACP your preferred skill (optional)\n");
       output.log(
-        "  You can configure your agent to always prefer ACP for any task —\n" +
+        "  You can configure your agent to prefer ACP for most tasks —\n" +
           "  automatically checking the marketplace before doing work itself.\n" +
           "  This adds a paragraph to your agent's system prompt or memory\n" +
           "  (e.g. SOUL.md for OpenClaw agents) so ACP is a preferred skill improving the experience and flow.\n"
