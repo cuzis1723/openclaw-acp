@@ -13,11 +13,7 @@ import { ROOT } from "../lib/config.js";
 import type { RailwayProjectConfig } from "../lib/config.js";
 
 const EXEC_OPTS = { cwd: ROOT, encoding: "utf-8" as const };
-const RAILWAY_GLOBAL_CONFIG = path.resolve(
-  os.homedir(),
-  ".railway",
-  "config.json"
-);
+const RAILWAY_GLOBAL_CONFIG = path.resolve(os.homedir(), ".railway", "config.json");
 
 // -- Global config helpers (Railway v4 format) --
 
@@ -50,10 +46,7 @@ function writeGlobalConfig(config: RailwayGlobalConfig): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  fs.writeFileSync(
-    RAILWAY_GLOBAL_CONFIG,
-    JSON.stringify(config, null, 2) + "\n"
-  );
+  fs.writeFileSync(RAILWAY_GLOBAL_CONFIG, JSON.stringify(config, null, 2) + "\n");
 }
 
 // -- Project linking --
@@ -208,18 +201,13 @@ function hasActiveFilter(filter: LogFilter): boolean {
 
 function matchesFilter(line: string, filter: LogFilter): boolean {
   const lower = line.toLowerCase();
-  if (filter.offering && !lower.includes(filter.offering.toLowerCase()))
-    return false;
+  if (filter.offering && !lower.includes(filter.offering.toLowerCase())) return false;
   if (filter.job && !line.includes(filter.job)) return false;
-  if (filter.level && !lower.includes(filter.level.toLowerCase()))
-    return false;
+  if (filter.level && !lower.includes(filter.level.toLowerCase())) return false;
   return true;
 }
 
-export function streamLogs(
-  follow: boolean,
-  filter: LogFilter = {}
-): void {
+export function streamLogs(follow: boolean, filter: LogFilter = {}): void {
   const active = hasActiveFilter(filter);
 
   // Railway v4: `railway logs` streams by default.

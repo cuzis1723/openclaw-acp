@@ -31,10 +31,7 @@ function formatBalance(hexBalance: string, decimals: number): string {
   const whole = raw / divisor;
   const remainder = raw % divisor;
   if (remainder === 0n) return whole.toString();
-  const fracStr = remainder
-    .toString()
-    .padStart(decimals, "0")
-    .replace(/0+$/, "");
+  const fracStr = remainder.toString().padStart(decimals, "0").replace(/0+$/, "");
   return `${whole}.${fracStr}`;
 }
 
@@ -47,19 +44,13 @@ export async function address(): Promise<void> {
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Failed to get wallet address: ${
-        e instanceof Error ? e.message : String(e)
-      }`
-    );
+    output.fatal(`Failed to get wallet address: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
 export async function balance(): Promise<void> {
   try {
-    const balances = await client.get<{ data: WalletBalance[] }>(
-      "/acp/wallet-balances"
-    );
+    const balances = await client.get<{ data: WalletBalance[] }>("/acp/wallet-balances");
 
     const data = balances.data.data.map((token) => ({
       network: token.network,
@@ -78,28 +69,17 @@ export async function balance(): Promise<void> {
       }
       for (const t of tokens) {
         const sym =
-          t.tokenMetadata?.symbol ||
-          t.symbol ||
-          (t.tokenAddress === null ? "ETH" : "???");
-        const name =
-          t.tokenMetadata?.name || (t.tokenAddress === null ? "Ether" : "");
+          t.tokenMetadata?.symbol || t.symbol || (t.tokenAddress === null ? "ETH" : "???");
+        const name = t.tokenMetadata?.name || (t.tokenAddress === null ? "Ether" : "");
         const decimals = t.tokenMetadata?.decimals ?? t.decimals ?? 18;
         const bal = formatBalance(t.tokenBalance, decimals);
         const price = t.tokenPrices?.[0]?.value ?? "-";
-        output.log(
-          `  ${sym.padEnd(8)} ${name.padEnd(20)} ${bal.padStart(
-            20
-          )}    $${price}`
-        );
+        output.log(`  ${sym.padEnd(8)} ${name.padEnd(20)} ${bal.padStart(20)}    $${price}`);
       }
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Failed to get wallet balance: ${
-        e instanceof Error ? e.message : String(e)
-      }`
-    );
+    output.fatal(`Failed to get wallet balance: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -112,18 +92,13 @@ export async function topup(): Promise<void> {
       output.fatal("Failed to get topup URL.");
     }
 
-    output.output(
-      { url: result.url, walletAddress: info.walletAddress },
-      (data) => {
-        output.heading("Wallet Topup");
-        output.field("Wallet Address", data.walletAddress);
-        output.field("Topup URL", data.url);
-        output.log("\n  Visit the URL above to add funds to your wallet.\n");
-      }
-    );
+    output.output({ url: result.url, walletAddress: info.walletAddress }, (data) => {
+      output.heading("Wallet Topup");
+      output.field("Wallet Address", data.walletAddress);
+      output.field("Topup URL", data.url);
+      output.log("\n  Visit the URL above to add funds to your wallet.\n");
+    });
   } catch (e) {
-    output.fatal(
-      `Failed to get topup URL: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Failed to get topup URL: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

@@ -18,13 +18,13 @@ acp bounty create --title <text> --budget <number> [flags] --json
 
 ### Parameters
 
-| Flag                | Required | Description                                      |
-| ------------------- | -------- | ------------------------------------------------ |
-| `--title`           | Yes      | Short title for the bounty                       |
-| `--budget`          | Yes      | Budget in USD (positive number)                  |
-| `--description`     | No       | Longer description (defaults to title)            |
-| `--category`        | No       | `"digital"` or `"physical"` (default: `digital`) |
-| `--tags`            | No       | Comma-separated tags (e.g. `"video,animation"`)  |
+| Flag            | Required | Description                                      |
+| --------------- | -------- | ------------------------------------------------ |
+| `--title`       | Yes      | Short title for the bounty                       |
+| `--budget`      | Yes      | Budget in USD (positive number)                  |
+| `--description` | No       | Longer description (defaults to title)           |
+| `--category`    | No       | `"digital"` or `"physical"` (default: `digital`) |
+| `--tags`        | No       | Comma-separated tags (e.g. `"video,animation"`)  |
 
 > **Poster name and wallet address** are always set to the active agent automatically. No flag needed.
 > **Requirements** should be included in the `--description` field — describe everything the provider needs to know.
@@ -33,13 +33,13 @@ acp bounty create --title <text> --budget <number> [flags] --json
 
 > **IMPORTANT:** If the user's prompt does not clearly provide a value for a required field, **you MUST ask the user** before filling it in. Do NOT guess.
 
-| Field           | How to handle                                                                         |
-| --------------- | ------------------------------------------------------------------------------------- |
-| `--title`       | Summarize what the user needs in 10 words or less. If vague, ask for clarification.   |
+| Field           | How to handle                                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `--title`       | Summarize what the user needs in 10 words or less. If vague, ask for clarification.                                     |
 | `--description` | Use the user's own words including any requirements (duration, format, style, etc.). If too short, ask for more detail. |
-| `--budget`      | Use the dollar amount the user states. **If not mentioned, you MUST ask.**             |
-| `--category`    | `physical` for real-world items/shipping. `digital` for online/software/content. **If ambiguous, ask.** |
-| `--tags`        | Extract key topics as comma-separated values. If unsure, suggest a few for confirmation. |
+| `--budget`      | Use the dollar amount the user states. **If not mentioned, you MUST ask.**                                              |
+| `--category`    | `physical` for real-world items/shipping. `digital` for online/software/content. **If ambiguous, ask.**                 |
+| `--tags`        | Extract key topics as comma-separated values. If unsure, suggest a few for confirmation.                                |
 
 ### Examples
 
@@ -65,13 +65,13 @@ acp bounty create --title "3D printing service" --description "Need someone to 3
 
 **Response fields:**
 
-| Field            | Type    | Description                                             |
-| ---------------- | ------- | ------------------------------------------------------- |
-| `bountyId`       | string  | Unique bounty identifier                                |
-| `status`         | string  | Initial status — always `"open"` on creation            |
-| `cronRegistered` | boolean | Whether the cron job was auto-registered                |
-| `cronAction`     | string? | `"required"` if cron needs to be registered manually    |
-| `cronCommand`    | string? | The exact command to register the cron job               |
+| Field            | Type    | Description                                          |
+| ---------------- | ------- | ---------------------------------------------------- |
+| `bountyId`       | string  | Unique bounty identifier                             |
+| `status`         | string  | Initial status — always `"open"` on creation         |
+| `cronRegistered` | boolean | Whether the cron job was auto-registered             |
+| `cronAction`     | string? | `"required"` if cron needs to be registered manually |
+| `cronCommand`    | string? | The exact command to register the cron job           |
 
 > **IMPORTANT:** If `cronRegistered` is `false`, you **MUST** run the `cronCommand` immediately after bounty creation. This registers the poll cron job that monitors all bounties. Without it, bounties will not be polled for candidates.
 
@@ -182,9 +182,7 @@ acp bounty poll --json
       "jobPhase": "TRANSACTION"
     }
   ],
-  "cleaned": [
-    { "bountyId": "50", "status": "rejected" }
-  ],
+  "cleaned": [{ "bountyId": "50", "status": "rejected" }],
   "errors": []
 }
 ```
@@ -324,7 +322,6 @@ When a user picks a candidate (e.g. "pick Luvi for bounty 69"):
 6. **Confirm the match** — Call the bounty confirm-match API and update local state.
 7. **Notify the user** — "Job created! I'll keep you updated on the progress."
 
-
 **Error cases:**
 
 - `"Bounty is not pending_match. Current status: <status>"` — Bounty not ready for selection
@@ -359,9 +356,9 @@ open → pending_match → claimed → fulfilled (auto-cleaned)
          open           rejected / expired (auto-cleaned)
 ```
 
-| Status          | Meaning                                         | Next action                                   |
-| --------------- | ----------------------------------------------- | --------------------------------------------- |
-| `open`          | Bounty posted, waiting for provider candidates  | Wait; `bounty poll` checks automatically      |
+| Status          | Meaning                                          | Next action                                   |
+| --------------- | ------------------------------------------------ | --------------------------------------------- |
+| `open`          | Bounty posted, waiting for provider candidates   | Wait; `bounty poll` checks automatically      |
 | `pending_match` | Candidates available, waiting for user selection | Present candidates, user selects or rejects   |
 | `claimed`       | Provider selected, ACP job in progress           | `bounty poll` tracks job status automatically |
 | `fulfilled`     | Job completed, bounty done                       | Auto-cleaned by `bounty poll`                 |

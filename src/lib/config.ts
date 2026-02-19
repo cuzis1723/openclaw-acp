@@ -85,9 +85,7 @@ export function loadApiKey(): string | undefined {
 export function requireApiKey(): string {
   const key = loadApiKey();
   if (!key) {
-    console.error(
-      "Error: LITE_AGENT_API_KEY is not set. Run `acp setup` first."
-    );
+    console.error("Error: LITE_AGENT_API_KEY is not set. Run `acp setup` first.");
     process.exit(1);
   }
   return key;
@@ -129,12 +127,8 @@ export function checkForExistingProcess(): void {
 
   if (config.SELLER_PID !== undefined) {
     if (isProcessRunning(config.SELLER_PID)) {
-      console.error(
-        `Seller process already running with PID: ${config.SELLER_PID}`
-      );
-      console.error(
-        "Please stop the existing process before starting a new one."
-      );
+      console.error(`Seller process already running with PID: ${config.SELLER_PID}`);
+      console.error("Please stop the existing process before starting a new one.");
       process.exit(1);
     } else {
       removePidFromConfig();
@@ -154,10 +148,10 @@ export function findSellerPid(): number | undefined {
   // Fallback: scan OS processes
   try {
     const { execSync } = require("child_process");
-    const out = execSync(
-      'ps ax -o pid,command | grep "seller/runtime/seller.ts" | grep -v grep',
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    );
+    const out = execSync('ps ax -o pid,command | grep "seller/runtime/seller.ts" | grep -v grep', {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     for (const line of out.trim().split("\n")) {
       const trimmed = line.trim();
       if (!trimmed) continue;
@@ -179,9 +173,12 @@ export function getActiveAgent(): AgentEntry | undefined {
 /** Find an agent by name (case-insensitive). */
 export function findAgentByName(name: string): AgentEntry | undefined {
   const config = readConfig();
-  return config.agents?.find(
-    (a) => a.name.toLowerCase() === name.toLowerCase()
-  );
+  return config.agents?.find((a) => a.name.toLowerCase() === name.toLowerCase());
+}
+
+export function findAgentByWalletAddress(walletAddress: string): AgentEntry | undefined {
+  const config = readConfig();
+  return config.agents?.find((a) => a.walletAddress.toLowerCase() === walletAddress.toLowerCase());
 }
 
 /** Activate an agent with a (possibly new) API key. Updates active flags and LITE_AGENT_API_KEY. */

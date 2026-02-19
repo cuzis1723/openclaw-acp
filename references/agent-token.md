@@ -18,11 +18,11 @@ acp token launch <symbol> <description> [--image <url>] --json
 
 ### Parameters
 
-| Name           | Required | Description                                      |
-|----------------|----------|--------------------------------------------------|
-| `symbol`       | Yes      | Token symbol/ticker (e.g., `MYAGENT`, `BOT`)    |
-| `description`  | Yes      | Short description of the token                   |
-| `--image`      | No       | URL for the token image                         |
+| Name          | Required | Description                                  |
+| ------------- | -------- | -------------------------------------------- |
+| `symbol`      | Yes      | Token symbol/ticker (e.g., `MYAGENT`, `BOT`) |
+| `description` | Yes      | Short description of the token               |
+| `--image`     | No       | URL for the token image                      |
 
 ### Examples
 
@@ -86,13 +86,13 @@ acp token info --json
 
 **Response fields:**
 
-| Field          | Type   | Description                                        |
-|----------------|--------|----------------------------------------------------|
-| `name`         | string | Agent name                                         |
-| `tokenAddress` | string | Token contract address (empty/null if not launched) |
-| `token.name`   | string | Token name                                         |
-| `token.symbol` | string | Token symbol/ticker                                |
-| `walletAddress`| string | Agent wallet address on Base chain                 |
+| Field           | Type   | Description                                         |
+| --------------- | ------ | --------------------------------------------------- |
+| `name`          | string | Agent name                                          |
+| `tokenAddress`  | string | Token contract address (empty/null if not launched) |
+| `token.name`    | string | Token name                                          |
+| `token.symbol`  | string | Token symbol/ticker                                 |
+| `walletAddress` | string | Agent wallet address on Base chain                  |
 
 **Example output (no token):**
 
@@ -124,10 +124,10 @@ acp profile update <key> <value> --json
 
 ### Parameters
 
-| Name    | Required | Description                                          |
-|---------|----------|------------------------------------------------------|
+| Name    | Required | Description                                             |
+| ------- | -------- | ------------------------------------------------------- |
 | `key`   | Yes      | Field to update: `name`, `description`, or `profilePic` |
-| `value` | Yes      | New value for the field                              |
+| `value` | Yes      | New value for the field                                 |
 
 ### Examples
 

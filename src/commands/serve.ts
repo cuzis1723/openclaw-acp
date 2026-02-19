@@ -43,8 +43,7 @@ function ensureLogsDir(): void {
 function offeringHasLocalFiles(offeringName: string): boolean {
   const dir = path.join(getOfferingsRoot(), offeringName);
   return (
-    fs.existsSync(path.join(dir, "handlers.ts")) &&
-    fs.existsSync(path.join(dir, "offering.json"))
+    fs.existsSync(path.join(dir, "handlers.ts")) && fs.existsSync(path.join(dir, "offering.json"))
   );
 }
 
@@ -60,9 +59,7 @@ export async function start(): Promise<void> {
   try {
     const agentInfo = await getMyAgentInfo();
     if (!agentInfo.jobs || agentInfo.jobs.length === 0) {
-      output.warn(
-        "No offerings registered on ACP. Run `acp sell create <name>` first.\n"
-      );
+      output.warn("No offerings registered on ACP. Run `acp sell create <name>` first.\n");
     } else {
       const missing = agentInfo.jobs
         .filter((job) => !offeringHasLocalFiles(job.name))
@@ -80,13 +77,7 @@ export async function start(): Promise<void> {
     // Non-fatal — proceed with starting anyway
   }
 
-  const sellerScript = path.resolve(
-    __dirname,
-    "..",
-    "seller",
-    "runtime",
-    "seller.ts"
-  );
+  const sellerScript = path.resolve(__dirname, "..", "seller", "runtime", "seller.ts");
   const tsxBin = path.resolve(ROOT, "node_modules", ".bin", "tsx");
 
   ensureLogsDir();
@@ -152,9 +143,7 @@ export async function stop(): Promise<void> {
       output.log(`  Seller process (PID ${pid}) stopped.\n`);
     });
   } else {
-    output.error(
-      `Process (PID ${pid}) did not stop within 2 seconds. Try: kill -9 ${pid}`
-    );
+    output.error(`Process (PID ${pid}) did not stop within 2 seconds. Try: kill -9 ${pid}`);
   }
 }
 
@@ -190,22 +179,15 @@ function hasActiveFilter(filter: LogFilter): boolean {
 
 function matchesFilter(line: string, filter: LogFilter): boolean {
   const lower = line.toLowerCase();
-  if (filter.offering && !lower.includes(filter.offering.toLowerCase()))
-    return false;
+  if (filter.offering && !lower.includes(filter.offering.toLowerCase())) return false;
   if (filter.job && !line.includes(filter.job)) return false;
-  if (filter.level && !lower.includes(filter.level.toLowerCase()))
-    return false;
+  if (filter.level && !lower.includes(filter.level.toLowerCase())) return false;
   return true;
 }
 
-export async function logs(
-  follow: boolean = false,
-  filter: LogFilter = {}
-): Promise<void> {
+export async function logs(follow: boolean = false, filter: LogFilter = {}): Promise<void> {
   if (!fs.existsSync(SELLER_LOG_PATH)) {
-    output.log(
-      "  No log file found. Start the seller first: `acp serve start`\n"
-    );
+    output.log("  No log file found. Start the seller first: `acp serve start`\n");
     return;
   }
 
@@ -242,18 +224,12 @@ export async function logs(
     // Show the last 50 lines (or last 50 matching lines if filtered)
     const content = fs.readFileSync(SELLER_LOG_PATH, "utf-8");
     const lines = content.split("\n");
-    const filtered = active
-      ? lines.filter((l: string) => matchesFilter(l, filter))
-      : lines;
+    const filtered = active ? lines.filter((l: string) => matchesFilter(l, filter)) : lines;
     const last50 = filtered.slice(-51).join("\n"); // -51 because trailing newline
     if (last50.trim()) {
       output.log(last50);
     } else {
-      output.log(
-        active
-          ? "  No log lines matched the filter.\n"
-          : "  Log file is empty.\n"
-      );
+      output.log(active ? "  No log lines matched the filter.\n" : "  Log file is empty.\n");
     }
   }
 }

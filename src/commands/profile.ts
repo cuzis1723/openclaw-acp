@@ -16,16 +16,17 @@ export async function show(): Promise<void> {
       output.field("Name", data.name);
       output.field("Description", data.description || "(none)");
       output.field("Wallet", data.walletAddress);
-      output.field("Token", data.token?.symbol
-        ? `${data.token.symbol} (${data.tokenAddress})`
-        : data.tokenAddress || "(none)");
+      output.field(
+        "Token",
+        data.token?.symbol
+          ? `${data.token.symbol} (${data.tokenAddress})`
+          : data.tokenAddress || "(none)"
+      );
       if (data.jobs?.length > 0) {
         output.log("\n  Job Offerings:");
         for (const o of data.jobs) {
           const price = o.priceV2
-            ? `${o.priceV2.value} ${
-                o.priceV2.type === "fixed" ? "USDC" : ""
-              } (${o.priceV2.type})`
+            ? `${o.priceV2.value} ${o.priceV2.type === "fixed" ? "USDC" : ""} (${o.priceV2.type})`
             : "-";
           output.log(`    - ${o.name}  fee: ${price}  sla: ${o.slaMinutes}min`);
         }
@@ -33,9 +34,7 @@ export async function show(): Promise<void> {
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Failed to get profile: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Failed to get profile: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -44,16 +43,12 @@ export async function update(key: string, value: string): Promise<void> {
 
   if (!key?.trim() || !value?.trim()) {
     output.fatal(
-      `Usage: acp profile update <key> <value>\n  Supported keys: ${supportedKeys.join(
-        ", "
-      )}`
+      `Usage: acp profile update <key> <value>\n  Supported keys: ${supportedKeys.join(", ")}`
     );
   }
 
   if (!supportedKeys.includes(key)) {
-    output.fatal(
-      `Invalid key: ${key}. Supported keys: ${supportedKeys.join(", ")}`
-    );
+    output.fatal(`Invalid key: ${key}. Supported keys: ${supportedKeys.join(", ")}`);
   }
 
   try {
@@ -65,8 +60,6 @@ export async function update(key: string, value: string): Promise<void> {
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Failed to update profile: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Failed to update profile: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

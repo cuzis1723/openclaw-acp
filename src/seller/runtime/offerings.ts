@@ -38,19 +38,14 @@ export async function loadOffering(
   offeringName: string,
   agentDirName: string
 ): Promise<LoadedOffering> {
-  const offeringDir = path.resolve(
-    resolveOfferingsRoot(agentDirName),
-    offeringName
-  );
+  const offeringDir = path.resolve(resolveOfferingsRoot(agentDirName), offeringName);
 
   // offering.json
   const configPath = path.join(offeringDir, "offering.json");
   if (!fs.existsSync(configPath)) {
     throw new Error(`offering.json not found: ${configPath}`);
   }
-  const config: OfferingConfig = JSON.parse(
-    fs.readFileSync(configPath, "utf-8")
-  );
+  const config: OfferingConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
   // handlers.ts (dynamically imported)
   const handlersPath = path.join(offeringDir, "handlers.ts");
@@ -61,9 +56,7 @@ export async function loadOffering(
   const handlers = (await import(handlersPath)) as OfferingHandlers;
 
   if (typeof handlers.executeJob !== "function") {
-    throw new Error(
-      `handlers.ts in "${offeringName}" must export an executeJob function`
-    );
+    throw new Error(`handlers.ts in "${offeringName}" must export an executeJob function`);
   }
 
   return { config, handlers };

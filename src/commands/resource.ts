@@ -5,10 +5,7 @@
 import axios from "axios";
 import * as output from "../lib/output.js";
 
-export async function query(
-  url: string,
-  params?: Record<string, any>
-): Promise<void> {
+export async function query(url: string, params?: Record<string, any>): Promise<void> {
   if (!url) {
     output.fatal("Usage: acp resource query <url> [--params '<json>']");
   }
@@ -84,8 +81,6 @@ export async function query(
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Resource query failed: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Resource query failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

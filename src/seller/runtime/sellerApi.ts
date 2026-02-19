@@ -35,10 +35,7 @@ export interface RequestPaymentParams {
   };
 }
 
-export async function requestPayment(
-  jobId: number,
-  params: RequestPaymentParams
-): Promise<void> {
+export async function requestPayment(jobId: number, params: RequestPaymentParams): Promise<void> {
   await client.post(`/acp/providers/jobs/${jobId}/requirement`, params);
 }
 
@@ -52,10 +49,7 @@ export interface DeliverJobParams {
   };
 }
 
-export async function deliverJob(
-  jobId: number,
-  params: DeliverJobParams
-): Promise<void> {
+export async function deliverJob(jobId: number, params: DeliverJobParams): Promise<void> {
   const delivStr =
     typeof params.deliverable === "string"
       ? params.deliverable
@@ -63,9 +57,7 @@ export async function deliverJob(
   const transferStr = params.payableDetail
     ? `  transfer: ${params.payableDetail.amount} @ ${params.payableDetail.tokenAddress}`
     : "";
-  console.log(
-    `[sellerApi] deliverJob  jobId=${jobId}  deliverable=${delivStr}${transferStr}`
-  );
+  console.log(`[sellerApi] deliverJob  jobId=${jobId}  deliverable=${delivStr}${transferStr}`);
 
   return await client.post(`/acp/providers/jobs/${jobId}/deliverable`, params);
 }

@@ -58,13 +58,9 @@ export async function createJobOffering(
   }
 }
 
-export async function deleteJobOffering(
-  offeringName: string
-): Promise<{ success: boolean }> {
+export async function deleteJobOffering(offeringName: string): Promise<{ success: boolean }> {
   try {
-    await client.delete(
-      `/acp/job-offerings/${encodeURIComponent(offeringName)}`
-    );
+    await client.delete(`/acp/job-offerings/${encodeURIComponent(offeringName)}`);
     return { success: true };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -88,9 +84,7 @@ export async function upsertResourceApi(
   }
 }
 
-export async function deleteResourceApi(
-  resourceName: string
-): Promise<{ success: boolean }> {
+export async function deleteResourceApi(resourceName: string): Promise<{ success: boolean }> {
   try {
     await client.delete(`/acp/resources/${encodeURIComponent(resourceName)}`);
     return { success: true };
@@ -106,9 +100,7 @@ export async function getPaymentUrl(): Promise<{
   url?: string;
 }> {
   try {
-    const { data } = await client.get<{ data: PaymentUrlResponse }>(
-      "/acp/topup"
-    );
+    const { data } = await client.get<{ data: PaymentUrlResponse }>("/acp/topup");
     return { success: true, url: data.data.url };
   } catch (error: any) {
     const msg = error instanceof Error ? error.message : String(error);

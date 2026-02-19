@@ -35,7 +35,7 @@ export async function requireActiveAgent(): Promise<ActiveAgentInfo> {
     // There IS an active agent but the API call failed (likely expired session/key)
     console.error(
       `Error: Active agent "${active.name}" found but API call failed. ` +
-      `Session may have expired. Run \`acp login\` to re-authenticate.`
+        `Session may have expired. Run \`acp login\` to re-authenticate.`
     );
     process.exit(1);
   }
@@ -45,15 +45,13 @@ export async function requireActiveAgent(): Promise<ActiveAgentInfo> {
     const names = agents.map((a) => a.name).join(", ");
     console.error(
       `Error: No active agent selected. Available agents: ${names}\n` +
-      `Run \`acp agent switch <agent-name>\` to select one.`
+        `Run \`acp agent switch <agent-name>\` to select one.`
     );
     process.exit(1);
   }
 
   // No agents at all
-  console.error(
-    "Error: No agents configured. Run `acp setup` to create one."
-  );
+  console.error("Error: No agents configured. Run `acp setup` to create one.");
   process.exit(1);
 }
 

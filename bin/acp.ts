@@ -85,6 +85,7 @@ function buildHelp(): string {
     cmd("agent list", "Show all agents (syncs from server)"),
     cmd("agent create <agent-name>", "Create a new agent"),
     cmd("agent switch <agent-name>", "Switch the active agent"),
+    flag("--wallet <address>", "Switch by wallet address instead of name"),
     "",
     section("Wallet"),
     cmd("wallet address", "Get agent wallet address"),
@@ -134,6 +135,7 @@ function buildHelp(): string {
     cmd("sell resource init <resource-name>", "Scaffold a new resource"),
     cmd("sell resource create <resource-name>", "Register resource on ACP"),
     cmd("sell resource delete <resource-name>", "Delete resource from ACP"),
+    cmd("sell resource list", "Show all resources with status"),
     "",
     section("Seller Runtime"),
     cmd("serve start", "Start the seller runtime"),
@@ -170,204 +172,219 @@ function buildHelp(): string {
 
 function buildCommandHelp(command: string): string | undefined {
   const h: Record<string, () => string> = {
-    setup: () => [
-      "",
-      `  ${bold("acp setup")} ${dim("— Interactive setup")}`,
-      "",
-      `  ${dim("Guides you through:")}`,
-      `    1. Login to app.virtuals.io`,
-      `    2. Select or create an agent`,
-      `    3. Optionally launch an agent token`,
-      "",
-    ].join("\n"),
+    setup: () =>
+      [
+        "",
+        `  ${bold("acp setup")} ${dim("— Interactive setup")}`,
+        "",
+        `  ${dim("Guides you through:")}`,
+        `    1. Login to app.virtuals.io`,
+        `    2. Select or create an agent`,
+        `    3. Optionally launch an agent token`,
+        "",
+      ].join("\n"),
 
-    agent: () => [
-      "",
-      `  ${bold("acp agent")} ${dim("— Manage multiple agents")}`,
-      "",
-      cmd("list", "Show all agents (fetches from server)"),
-      cmd("create <agent-name>", "Create a new agent"),
-      cmd("switch <agent-name>", "Switch active agent (regenerates API key)"),
-      "",
-      `  ${dim("All commands auto-prompt login if your session has expired.")}`,
-      "",
-    ].join("\n"),
+    agent: () =>
+      [
+        "",
+        `  ${bold("acp agent")} ${dim("— Manage multiple agents")}`,
+        "",
+        cmd("list", "Show all agents (fetches from server)"),
+        cmd("create <agent-name>", "Create a new agent"),
+        cmd("switch <agent-name>", "Switch active agent"),
+        flag("--wallet <address>", "Switch by wallet address instead of name"),
+        "",
+        `  ${dim("All commands auto-prompt login if your session has expired.")}`,
+        "",
+      ].join("\n"),
 
-    wallet: () => [
-      "",
-      `  ${bold("acp wallet")} ${dim("— Manage your agent wallet")}`,
-      "",
-      cmd("address", "Get your wallet address (Base chain)"),
-      cmd("balance", "Get all token balances in your wallet"),
-      "",
-    ].join("\n"),
+    wallet: () =>
+      [
+        "",
+        `  ${bold("acp wallet")} ${dim("— Manage your agent wallet")}`,
+        "",
+        cmd("address", "Get your wallet address (Base chain)"),
+        cmd("balance", "Get all token balances in your wallet"),
+        "",
+      ].join("\n"),
 
-    browse: () => [
-      "",
-      `  ${bold("acp browse <query>")} ${dim("— Search and discover agents")}`,
-      "",
-      `  ${dim("Examples:")}`,
-      `    acp browse "trading"`,
-      `    acp browse "data analysis"`,
-      `    acp browse "content generation" --json`,
-      "",
-    ].join("\n"),
+    browse: () =>
+      [
+        "",
+        `  ${bold("acp browse <query>")} ${dim("— Search and discover agents")}`,
+        "",
+        `  ${dim("Examples:")}`,
+        `    acp browse "trading"`,
+        `    acp browse "data analysis"`,
+        `    acp browse "content generation" --json`,
+        "",
+      ].join("\n"),
 
-    job: () => [
-      "",
-      `  ${bold("acp job")} ${dim("— Create and monitor jobs")}`,
-      "",
-      cmd("create <wallet> <offering>", "Start a job with an agent"),
-      flag("--requirements '<json>'", "Service requirements (JSON)"),
-      `    ${dim("Example: acp job create 0x1234 \"Execute Trade\" --requirements '{\"pair\":\"ETH/USDC\"}'")}`,
-      "",
-      cmd("status <job-id>", "Check job status and deliverable"),
-      `    ${dim("Example: acp job status 12345")}`,
-      "",
-      cmd("active [page] [pageSize]", "List active jobs"),
-      cmd("completed [page] [pageSize]", "List completed jobs"),
-      `    ${dim("Pagination: positional args or --page N --pageSize N")}`,
-      "",
-    ].join("\n"),
+    job: () =>
+      [
+        "",
+        `  ${bold("acp job")} ${dim("— Create and monitor jobs")}`,
+        "",
+        cmd("create <wallet> <offering>", "Start a job with an agent"),
+        flag("--requirements '<json>'", "Service requirements (JSON)"),
+        `    ${dim(
+          'Example: acp job create 0x1234 "Execute Trade" --requirements \'{"pair":"ETH/USDC"}\''
+        )}`,
+        "",
+        cmd("status <job-id>", "Check job status and deliverable"),
+        `    ${dim("Example: acp job status 12345")}`,
+        "",
+        cmd("active [page] [pageSize]", "List active jobs"),
+        cmd("completed [page] [pageSize]", "List completed jobs"),
+        `    ${dim("Pagination: positional args or --page N --pageSize N")}`,
+        "",
+      ].join("\n"),
 
-    bounty: () => [
-      "",
-      `  ${bold("acp bounty")} ${dim("— Manage local bounty lifecycle")}`,
-      "",
-      cmd("create [query]", "Create a bounty (interactive or via flags)"),
-      `    ${dim("Interactive:  acp bounty create \"video production\"")}`,
-      `    ${dim("With flags:   acp bounty create --title \"Music video\" --budget 50 --tags \"video,music\" --json")}`,
-      "",
-      flag("--title <text>", "Bounty title (triggers non-interactive mode)"),
-      flag("--description <text>", "Description (defaults to title)"),
-      flag("--budget <number>", "Budget in USD"),
-      flag("--category <digital|physical>", "Category (default: digital)"),
-      flag("--tags <csv>", "Comma-separated tags"),
-      flag("--source-channel <name>", "Channel where bounty originated (e.g. telegram, webchat)"),
-      "",
-      cmd("poll", "Poll all active bounties and update local state"),
-      cmd("list", "List active local bounties"),
-      cmd("status <bounty-id>", "Fetch remote match status for a bounty"),
-      cmd(
-        "select <bounty-id>",
-        "Pick pending_match candidate, create ACP job, confirm match"
-      ),
-      cmd("cleanup <bounty-id>", "Remove local bounty state"),
-      "",
-    ].join("\n"),
+    bounty: () =>
+      [
+        "",
+        `  ${bold("acp bounty")} ${dim("— Manage local bounty lifecycle")}`,
+        "",
+        cmd("create [query]", "Create a bounty (interactive or via flags)"),
+        `    ${dim('Interactive:  acp bounty create "video production"')}`,
+        `    ${dim(
+          'With flags:   acp bounty create --title "Music video" --budget 50 --tags "video,music" --json'
+        )}`,
+        "",
+        flag("--title <text>", "Bounty title (triggers non-interactive mode)"),
+        flag("--description <text>", "Description (defaults to title)"),
+        flag("--budget <number>", "Budget in USD"),
+        flag("--category <digital|physical>", "Category (default: digital)"),
+        flag("--tags <csv>", "Comma-separated tags"),
+        flag("--source-channel <name>", "Channel where bounty originated (e.g. telegram, webchat)"),
+        "",
+        cmd("poll", "Poll all active bounties and update local state"),
+        cmd("list", "List active local bounties"),
+        cmd("status <bounty-id>", "Fetch remote match status for a bounty"),
+        cmd("select <bounty-id>", "Pick pending_match candidate, create ACP job, confirm match"),
+        cmd("cleanup <bounty-id>", "Remove local bounty state"),
+        "",
+      ].join("\n"),
 
-    token: () => [
-      "",
-      `  ${bold("acp token")} ${dim("— Manage your agent token")}`,
-      "",
-      cmd("launch <symbol> <description>", "Launch your agent's token (one per agent)"),
-      flag("--image <url>", "Token image URL"),
-      `    ${dim("Example: acp token launch MYAGENT \"Agent governance token\"")}`,
-      "",
-      cmd("info", "Get your agent's token details"),
-      "",
-    ].join("\n"),
+    token: () =>
+      [
+        "",
+        `  ${bold("acp token")} ${dim("— Manage your agent token")}`,
+        "",
+        cmd("launch <symbol> <description>", "Launch your agent's token (one per agent)"),
+        flag("--image <url>", "Token image URL"),
+        `    ${dim('Example: acp token launch MYAGENT "Agent governance token"')}`,
+        "",
+        cmd("info", "Get your agent's token details"),
+        "",
+      ].join("\n"),
 
-    profile: () => [
-      "",
-      `  ${bold("acp profile")} ${dim("— Manage your agent profile")}`,
-      "",
-      cmd("show", "Show your full agent profile"),
-      "",
-      cmd("update name <value>", "Update your agent's name"),
-      cmd("update description <value>", "Update your agent's description"),
-      cmd("update profilePic <url>", "Update your agent's profile picture"),
-      "",
-      `  ${dim("Example: acp profile update description \"Specializes in trading\"")}`,
-      "",
-    ].join("\n"),
+    profile: () =>
+      [
+        "",
+        `  ${bold("acp profile")} ${dim("— Manage your agent profile")}`,
+        "",
+        cmd("show", "Show your full agent profile"),
+        "",
+        cmd("update name <value>", "Update your agent's name"),
+        cmd("update description <value>", "Update your agent's description"),
+        cmd("update profilePic <url>", "Update your agent's profile picture"),
+        "",
+        `  ${dim('Example: acp profile update description "Specializes in trading"')}`,
+        "",
+      ].join("\n"),
 
-    sell: () => [
-      "",
-      `  ${bold("acp sell")} ${dim("— Create and manage service offerings")}`,
-      "",
-      cmd("init <offering-name>", "Scaffold a new offering"),
-      cmd("create <offering-name>", "Register offering on ACP"),
-      cmd("delete <offering-name>", "Delist offering from ACP"),
-      cmd("list", "Show all offerings with status"),
-      cmd("inspect <offering-name>", "Detailed view of an offering"),
-      "",
-      cmd("resource init <resource-name>", "Scaffold a new resource"),
-      cmd("resource create <resource-name>", "Register resource on ACP"),
-      cmd("resource delete <resource-name>", "Delete resource from ACP"),
-      "",
-      `  ${dim("Workflow:")}`,
-      `    acp sell init my_service`,
-      `    ${dim("# Edit offerings/my_service/offering.json and handlers.ts")}`,
-      `    acp sell create my_service`,
-      `    acp serve start`,
-      "",
-    ].join("\n"),
+    sell: () =>
+      [
+        "",
+        `  ${bold("acp sell")} ${dim("— Create and manage service offerings")}`,
+        "",
+        cmd("init <offering-name>", "Scaffold a new offering"),
+        cmd("create <offering-name>", "Register offering on ACP"),
+        cmd("delete <offering-name>", "Delist offering from ACP"),
+        cmd("list", "Show all offerings with status"),
+        cmd("inspect <offering-name>", "Detailed view of an offering"),
+        "",
+        cmd("resource init <resource-name>", "Scaffold a new resource"),
+        cmd("resource create <resource-name>", "Register resource on ACP"),
+        cmd("resource delete <resource-name>", "Delete resource from ACP"),
+        cmd("resource list", "Show all resources with status"),
+        "",
+        `  ${dim("Workflow:")}`,
+        `    acp sell init my_service`,
+        `    ${dim("# Edit offerings/my_service/offering.json and handlers.ts")}`,
+        `    acp sell create my_service`,
+        `    acp serve start`,
+        "",
+      ].join("\n"),
 
-    serve: () => [
-      "",
-      `  ${bold("acp serve")} ${dim("— Manage the seller runtime")}`,
-      "",
-      cmd("start", "Start the seller runtime (listens for jobs)"),
-      cmd("stop", "Stop the seller runtime"),
-      cmd("status", "Show whether the seller is running"),
-      cmd("logs", "Show recent seller logs (last 50 lines)"),
-      flag("--follow, -f", "Tail logs in real time (Ctrl+C to stop)"),
-      flag("--offering <name>", "Filter logs by offering name"),
-      flag("--job <id>", "Filter logs by job ID"),
-      flag("--level <level>", "Filter logs by level (e.g. error)"),
-      "",
-      cmd("deploy railway", "Deploy seller runtime to Railway"),
-      cmd("deploy railway setup", "First-time Railway project setup"),
-      cmd("deploy railway status", "Show remote deployment status"),
-      cmd("deploy railway logs", "Show remote deployment logs"),
-      flag("--follow, -f", "Tail logs in real time"),
-      flag("--offering <name>", "Filter logs by offering name"),
-      flag("--job <id>", "Filter logs by job ID"),
-      flag("--level <level>", "Filter logs by level (e.g. error)"),
-      cmd("deploy railway teardown", "Remove Railway deployment"),
-      cmd("deploy railway env", "List env vars on Railway"),
-      cmd("deploy railway env set KEY=val", "Set an env var"),
-      cmd("deploy railway env delete KEY", "Delete an env var"),
-      "",
-    ].join("\n"),
+    serve: () =>
+      [
+        "",
+        `  ${bold("acp serve")} ${dim("— Manage the seller runtime")}`,
+        "",
+        cmd("start", "Start the seller runtime (listens for jobs)"),
+        cmd("stop", "Stop the seller runtime"),
+        cmd("status", "Show whether the seller is running"),
+        cmd("logs", "Show recent seller logs (last 50 lines)"),
+        flag("--follow, -f", "Tail logs in real time (Ctrl+C to stop)"),
+        flag("--offering <name>", "Filter logs by offering name"),
+        flag("--job <id>", "Filter logs by job ID"),
+        flag("--level <level>", "Filter logs by level (e.g. error)"),
+        "",
+        cmd("deploy railway", "Deploy seller runtime to Railway"),
+        cmd("deploy railway setup", "First-time Railway project setup"),
+        cmd("deploy railway status", "Show remote deployment status"),
+        cmd("deploy railway logs", "Show remote deployment logs"),
+        flag("--follow, -f", "Tail logs in real time"),
+        flag("--offering <name>", "Filter logs by offering name"),
+        flag("--job <id>", "Filter logs by job ID"),
+        flag("--level <level>", "Filter logs by level (e.g. error)"),
+        cmd("deploy railway teardown", "Remove Railway deployment"),
+        cmd("deploy railway env", "List env vars on Railway"),
+        cmd("deploy railway env set KEY=val", "Set an env var"),
+        cmd("deploy railway env delete KEY", "Delete an env var"),
+        "",
+      ].join("\n"),
 
-    deploy: () => [
-      "",
-      `  ${bold("acp serve deploy")} ${dim("— Deploy seller runtime to the cloud")}`,
-      "",
-      `  ${dim("Workflow:")}`,
-      `    acp serve deploy railway setup    ${dim("# First-time setup")}`,
-      `    acp sell init my_service          ${dim("# Create offering")}`,
-      `    acp sell create my_service        ${dim("# Register on ACP")}`,
-      `    acp serve deploy railway          ${dim("# Deploy to Railway")}`,
-      "",
-      `  ${dim("Management:")}`,
-      `    acp serve deploy railway status       ${dim("# Check deployment")}`,
-      `    acp serve deploy railway logs -f      ${dim("# Tail logs")}`,
-      `    acp serve deploy railway teardown     ${dim("# Remove deployment")}`,
-      "",
-      `  ${dim("Environment Variables:")}`,
-      `    acp serve deploy railway env              ${dim("# List env vars")}`,
-      `    acp serve deploy railway env set KEY=val  ${dim("# Set an env var")}`,
-      `    acp serve deploy railway env delete KEY   ${dim("# Delete an env var")}`,
-      "",
-    ].join("\n"),
+    deploy: () =>
+      [
+        "",
+        `  ${bold("acp serve deploy")} ${dim("— Deploy seller runtime to the cloud")}`,
+        "",
+        `  ${dim("Workflow:")}`,
+        `    acp serve deploy railway setup    ${dim("# First-time setup")}`,
+        `    acp sell init my_service          ${dim("# Create offering")}`,
+        `    acp sell create my_service        ${dim("# Register on ACP")}`,
+        `    acp serve deploy railway          ${dim("# Deploy to Railway")}`,
+        "",
+        `  ${dim("Management:")}`,
+        `    acp serve deploy railway status       ${dim("# Check deployment")}`,
+        `    acp serve deploy railway logs -f      ${dim("# Tail logs")}`,
+        `    acp serve deploy railway teardown     ${dim("# Remove deployment")}`,
+        "",
+        `  ${dim("Environment Variables:")}`,
+        `    acp serve deploy railway env              ${dim("# List env vars")}`,
+        `    acp serve deploy railway env set KEY=val  ${dim("# Set an env var")}`,
+        `    acp serve deploy railway env delete KEY   ${dim("# Delete an env var")}`,
+        "",
+      ].join("\n"),
 
-    resource: () => [
-      "",
-      `  ${bold("acp resource")} ${dim("— Query an agent's resources by URL")}`,
-      "",
-      cmd("query <url>", "Query an agent's resource by its URL"),
-      flag("--params '<json>'", "Parameters to pass to the resource (JSON)"),
-      "",
-      `  ${dim("Examples:")}`,
-      `    acp resource query https://api.example.com/market-data`,
-      `    acp resource query https://api.example.com/market-data --params '{"symbol":"BTC"}'`,
-      "",
-      `  ${dim("Note: Always uses GET requests. Params are appended as query string.")}`,
-      "",
-    ].join("\n"),
+    resource: () =>
+      [
+        "",
+        `  ${bold("acp resource")} ${dim("— Query an agent's resources by URL")}`,
+        "",
+        cmd("query <url>", "Query an agent's resource by its URL"),
+        flag("--params '<json>'", "Parameters to pass to the resource (JSON)"),
+        "",
+        `  ${dim("Examples:")}`,
+        `    acp resource query https://api.example.com/market-data`,
+        `    acp resource query https://api.example.com/market-data --params '{"symbol":"BTC"}'`,
+        "",
+        `  ${dim("Note: Always uses GET requests. Params are appended as query string.")}`,
+        "",
+      ].join("\n"),
   };
 
   return h[command]?.();
@@ -420,7 +437,12 @@ async function main(): Promise<void> {
     const agent = await import("../src/commands/agent.js");
     if (subcommand === "list") return agent.list();
     if (subcommand === "create") return agent.create(rest[0]);
-    if (subcommand === "switch") return agent.switchAgent(rest[0]);
+    if (subcommand === "switch") {
+      const walletAddr = getFlagValue(rest, "--wallet");
+      if (walletAddr) return agent.switchAgent(walletAddr);
+      const nameArg = removeFlagWithValue(rest, "--wallet")[0];
+      return agent.switchAgentByName(nameArg);
+    }
     console.log(buildCommandHelp("agent"));
     return;
   }
@@ -455,9 +477,7 @@ async function main(): Promise<void> {
 
     case "browse": {
       const { browse } = await import("../src/commands/browse.js");
-      const query = [subcommand, ...rest]
-        .filter((a) => !a.startsWith("-"))
-        .join(" ");
+      const query = [subcommand, ...rest].filter((a) => !a.startsWith("-")).join(" ");
       return browse(query);
     }
 
@@ -529,10 +549,10 @@ async function main(): Promise<void> {
         }
 
         // Interactive fallback: treat remaining positional args as query seed
-        const query = rest
-          .filter((a) => a != null && !String(a).startsWith("-"))
-          .join(" ");
-        return bounty.create(query || undefined, { sourceChannel: sourceChannelFlag });
+        const query = rest.filter((a) => a != null && !String(a).startsWith("-")).join(" ");
+        return bounty.create(query || undefined, {
+          sourceChannel: sourceChannelFlag,
+        });
       }
       if (subcommand === "poll") return bounty.poll();
       if (subcommand === "list") return bounty.list();
@@ -575,10 +595,9 @@ async function main(): Promise<void> {
       if (subcommand === "resource") {
         const resourceSubcommand = rest[0];
         if (resourceSubcommand === "init") return sell.resourceInit(rest[1]);
-        if (resourceSubcommand === "create")
-          return sell.resourceCreate(rest[1]);
-        if (resourceSubcommand === "delete")
-          return sell.resourceDelete(rest[1]);
+        if (resourceSubcommand === "create") return sell.resourceCreate(rest[1]);
+        if (resourceSubcommand === "delete") return sell.resourceDelete(rest[1]);
+        if (resourceSubcommand === "list") return sell.resourceList();
         console.log(buildCommandHelp("sell"));
         return;
       }
@@ -619,10 +638,7 @@ async function main(): Promise<void> {
               job: getFlagValue(logsArgs, "--job"),
               level: getFlagValue(logsArgs, "--level"),
             };
-            return deploy.logs(
-              hasFlag(logsArgs, "--follow", "-f"),
-              filter
-            );
+            return deploy.logs(hasFlag(logsArgs, "--follow", "-f"), filter);
           }
           if (providerSub === "teardown") return deploy.teardown();
           if (providerSub === "env") {
@@ -669,8 +685,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  console.error(
-    JSON.stringify({ error: e instanceof Error ? e.message : String(e) })
-  );
+  console.error(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }));
   process.exit(1);
 });

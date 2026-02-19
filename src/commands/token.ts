@@ -13,9 +13,7 @@ export async function launch(
   imageUrl?: string
 ): Promise<void> {
   if (!symbol || !description) {
-    output.fatal(
-      "Usage: acp token launch <symbol> <description> [--image <url>]"
-    );
+    output.fatal("Usage: acp token launch <symbol> <description> [--image <url>]");
   }
 
   // Check if token already exists
@@ -23,17 +21,12 @@ export async function launch(
     const info = await getMyAgentInfo();
     if (info.tokenAddress) {
       const symbol = info.token?.symbol;
-      output.output(
-        { alreadyLaunched: true, symbol, tokenAddress: info.tokenAddress },
-        () => {
-          output.heading("Token Already Launched");
-          if (symbol) output.field("Symbol", symbol);
-          output.field("Token Address", info.tokenAddress);
-          output.log(
-            "\n  Each agent can only launch one token. Run `acp token info` for details.\n"
-          );
-        }
-      );
+      output.output({ alreadyLaunched: true, symbol, tokenAddress: info.tokenAddress }, () => {
+        output.heading("Token Already Launched");
+        if (symbol) output.field("Symbol", symbol);
+        output.field("Token Address", info.tokenAddress);
+        output.log("\n  Each agent can only launch one token. Run `acp token info` for details.\n");
+      });
       return;
     }
   } catch {
@@ -53,9 +46,7 @@ export async function launch(
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Failed to launch token: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Failed to launch token: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -69,20 +60,13 @@ export async function info(): Promise<void> {
         output.field("Name", data.token.name);
         output.field("Symbol", output.formatSymbol(data.token.symbol));
         output.field("Address", data.tokenAddress);
-        output.field(
-          "URL",
-          `https://app.virtuals.io/prototypes/${data.tokenAddress}`
-        );
+        output.field("URL", `https://app.virtuals.io/prototypes/${data.tokenAddress}`);
       } else {
-        output.log(
-          "  No token launched yet. Use `acp token launch` to create one."
-        );
+        output.log("  No token launched yet. Use `acp token launch` to create one.");
       }
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Failed to get token info: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Failed to get token info: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

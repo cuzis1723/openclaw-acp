@@ -17,13 +17,7 @@ import * as path from "path";
 import { execSync } from "child_process";
 import readline from "readline";
 import * as output from "../lib/output.js";
-import {
-  readConfig,
-  writeConfig,
-  getActiveAgent,
-  sanitizeAgentName,
-  ROOT,
-} from "../lib/config.js";
+import { readConfig, writeConfig, getActiveAgent, sanitizeAgentName, ROOT } from "../lib/config.js";
 import type { DeployInfo, AgentEntry } from "../lib/config.js";
 import { generateDockerfile, generateDockerignore } from "../deploy/docker.js";
 import * as railway from "../deploy/railway.js";
@@ -33,13 +27,7 @@ const DOCKERFILE_PATH = path.resolve(ROOT, "Dockerfile");
 const DOCKERIGNORE_PATH = path.resolve(ROOT, ".dockerignore");
 
 function getOfferingsRoot(agentName: string): string {
-  return path.resolve(
-    ROOT,
-    "src",
-    "seller",
-    "offerings",
-    sanitizeAgentName(agentName)
-  );
+  return path.resolve(ROOT, "src", "seller", "offerings", sanitizeAgentName(agentName));
 }
 
 // -- Helpers --
@@ -73,13 +61,10 @@ function installRailwayCli(): void {
 async function requireCli(): Promise<void> {
   const { installed } = railway.checkCli();
   if (!installed) {
-    const answer = await prompt(
-      "  Railway CLI not found. Install it now? (Y/n): "
-    );
+    const answer = await prompt("  Railway CLI not found. Install it now? (Y/n): ");
     if (answer.toLowerCase() === "n") {
       output.fatal(
-        "Railway CLI is required. Install manually:\n\n" +
-          "  npm install -g @railway/cli\n"
+        "Railway CLI is required. Install manually:\n\n" + "  npm install -g @railway/cli\n"
       );
     }
     installRailwayCli();
@@ -223,18 +208,15 @@ export async function setup(): Promise<void> {
     railwayConfig,
   });
 
-  output.output(
-    { provider: "railway", agent: agent.name, status: "setup_complete" },
-    () => {
-      output.heading("Railway Setup Complete");
-      output.field("Agent", agent.name);
-      output.field("Railway Project", `acp-${agent.name}`);
-      output.log("\n  Next steps:");
-      output.log("    1. Create offerings:   acp sell init <name>");
-      output.log("    2. Register on ACP:    acp sell create <name>");
-      output.log("    3. Deploy:             acp serve deploy railway\n");
-    }
-  );
+  output.output({ provider: "railway", agent: agent.name, status: "setup_complete" }, () => {
+    output.heading("Railway Setup Complete");
+    output.field("Agent", agent.name);
+    output.field("Railway Project", `acp-${agent.name}`);
+    output.log("\n  Next steps:");
+    output.log("    1. Create offerings:   acp sell init <name>");
+    output.log("    2. Register on ACP:    acp sell create <name>");
+    output.log("    3. Deploy:             acp serve deploy railway\n");
+  });
 }
 
 export async function deploy(): Promise<void> {
@@ -270,8 +252,7 @@ export async function deploy(): Promise<void> {
       output.success(`Linked service ${projectName}`);
     } catch {
       output.warn(
-        "Could not auto-link service. Link manually:\n" +
-          `  railway service link ${projectName}`
+        "Could not auto-link service. Link manually:\n" + `  railway service link ${projectName}`
       );
     }
   }
@@ -286,7 +267,8 @@ export async function deploy(): Promise<void> {
     } catch {
       output.warn(
         "Could not set LITE_AGENT_API_KEY. Set it manually:\n" +
-          "  acp serve deploy railway env set LITE_AGENT_API_KEY=" + apiKey
+          "  acp serve deploy railway env set LITE_AGENT_API_KEY=" +
+          apiKey
       );
     }
   }
@@ -299,18 +281,15 @@ export async function deploy(): Promise<void> {
     deployedAt: new Date().toISOString(),
   });
 
-  output.output(
-    { provider: "railway", status: "deployed", agent: agent.name, offerings },
-    () => {
-      output.heading("Deployed to Railway");
-      output.field("Agent", agent.name);
-      output.field("Offerings", offerings.join(", "));
-      output.log("");
-      output.log("  Check status:  acp serve deploy railway status");
-      output.log("  View logs:     acp serve deploy railway logs --follow");
-      output.log("  Tear down:     acp serve deploy railway teardown\n");
-    }
-  );
+  output.output({ provider: "railway", status: "deployed", agent: agent.name, offerings }, () => {
+    output.heading("Deployed to Railway");
+    output.field("Agent", agent.name);
+    output.field("Offerings", offerings.join(", "));
+    output.log("");
+    output.log("  Check status:  acp serve deploy railway status");
+    output.log("  View logs:     acp serve deploy railway logs --follow");
+    output.log("  Tear down:     acp serve deploy railway teardown\n");
+  });
 }
 
 export async function status(): Promise<void> {
@@ -328,10 +307,7 @@ export async function status(): Promise<void> {
   output.log("");
 }
 
-export async function logs(
-  follow: boolean = false,
-  filter: LogFilter = {}
-): Promise<void> {
+export async function logs(follow: boolean = false, filter: LogFilter = {}): Promise<void> {
   await linkToCurrentAgent();
   railway.streamLogs(follow, filter);
 }
@@ -343,14 +319,11 @@ export async function teardown(): Promise<void> {
 
   removeDeployInfo(agent.id);
 
-  output.output(
-    { provider: "railway", agent: agent.name, status: "torn_down" },
-    () => {
-      output.success(`Deployment for "${agent.name}" removed.`);
-      output.log("  The Railway project still exists — re-deploy anytime with:");
-      output.log("    acp serve deploy railway\n");
-    }
-  );
+  output.output({ provider: "railway", agent: agent.name, status: "torn_down" }, () => {
+    output.success(`Deployment for "${agent.name}" removed.`);
+    output.log("  The Railway project still exists — re-deploy anytime with:");
+    output.log("    acp serve deploy railway\n");
+  });
 }
 
 export async function env(): Promise<void> {
@@ -371,9 +344,7 @@ export async function envSet(keyValue: string): Promise<void> {
 
   const eqIdx = keyValue.indexOf("=");
   if (eqIdx === -1) {
-    output.fatal(
-      "Invalid format. Use: acp serve deploy railway env set KEY=value"
-    );
+    output.fatal("Invalid format. Use: acp serve deploy railway env set KEY=value");
   }
 
   const key = keyValue.slice(0, eqIdx);

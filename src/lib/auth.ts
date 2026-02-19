@@ -6,11 +6,8 @@
 import axios, { type AxiosInstance } from "axios";
 import * as output from "./output.js";
 import { openUrl } from "./open.js";
-import {
-  readConfig,
-  writeConfig,
-  type AgentEntry,
-} from "./config.js";
+import { readConfig, writeConfig, type AgentEntry } from "./config.js";
+import client from "./client.js";
 
 const API_URL = process.env.ACP_AUTH_URL || "https://acpx.virtuals.io";
 
@@ -71,6 +68,7 @@ function getJwtExpiry(token: string): Date | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
+    // @ts-ignore
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
     if (typeof payload.exp === "number") {
       return new Date(payload.exp * 1000); // exp is seconds since epoch
@@ -99,9 +97,7 @@ export function storeSessionToken(token: string): void {
 // -- Auth API --
 
 export async function getAuthUrl(): Promise<AuthUrlResponse> {
-  const { data } = await apiClient().get<{ data: AuthUrlResponse }>(
-    "/api/auth/lite/auth-url"
-  );
+  const { data } = await apiClient().get<{ data: AuthUrlResponse }>("/api/auth/lite/auth-url");
   return data.data;
 }
 
@@ -146,6 +142,17 @@ export async function regenerateApiKey(
   return data.data;
 }
 
+export async function isAgentApiKeyValid(apiKey: string): Promise<boolean> {
+  return await client
+    .get("/acp/me", {
+      headers: {
+        "x-api-key": apiKey,
+      },
+    })
+    .then(() => true)
+    .catch(() => false);
+}
+
 // -- Login (polling-based, no stdin required) --
 
 /** How often to poll the auth status endpoint (ms). */
@@ -167,9 +174,7 @@ export async function interactiveLogin(): Promise<void> {
   try {
     auth = await getAuthUrl();
   } catch (e) {
-    output.fatal(
-      `Could not get login link: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Could not get login link: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   const { authUrl, requestId } = auth;

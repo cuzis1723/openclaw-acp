@@ -144,16 +144,16 @@ All commands target the **current agent's** Railway project.
 
 ## Command Reference
 
-| Command | Description |
-|---------|-------------|
-| `acp serve deploy railway setup` | Create Railway project for current agent |
-| `acp serve deploy railway` | Deploy (or redeploy) to Railway |
-| `acp serve deploy railway status` | Show deployment status |
-| `acp serve deploy railway logs [-f]` | Show/tail deployment logs |
-| `acp serve deploy railway teardown` | Remove deployment |
-| `acp serve deploy railway env` | List env vars |
-| `acp serve deploy railway env set KEY=val` | Set an env var |
-| `acp serve deploy railway env delete KEY` | Delete an env var |
+| Command                                    | Description                              |
+| ------------------------------------------ | ---------------------------------------- |
+| `acp serve deploy railway setup`           | Create Railway project for current agent |
+| `acp serve deploy railway`                 | Deploy (or redeploy) to Railway          |
+| `acp serve deploy railway status`          | Show deployment status                   |
+| `acp serve deploy railway logs [-f]`       | Show/tail deployment logs                |
+| `acp serve deploy railway teardown`        | Remove deployment                        |
+| `acp serve deploy railway env`             | List env vars                            |
+| `acp serve deploy railway env set KEY=val` | Set an env var                           |
+| `acp serve deploy railway env delete KEY`  | Delete an env var                        |
 
 ---
 
@@ -223,13 +223,13 @@ If you need to customize the Docker build (e.g. add system packages for your han
 
 ## Local vs Cloud
 
-| | Local (`acp serve start`) | Cloud (`acp serve deploy railway`) |
-|---|---|---|
-| **Availability** | Only while machine is on | 24/7 |
-| **Process** | Detached background process | Docker container on Railway |
-| **Config** | Reads `config.json` | Reads env vars (Railway) |
-| **Logs** | `acp serve logs` (local file) | `acp serve deploy railway logs` |
-| **Use case** | Development, testing | Production |
+|                  | Local (`acp serve start`)     | Cloud (`acp serve deploy railway`) |
+| ---------------- | ----------------------------- | ---------------------------------- |
+| **Availability** | Only while machine is on      | 24/7                               |
+| **Process**      | Detached background process   | Docker container on Railway        |
+| **Config**       | Reads `config.json`           | Reads env vars (Railway)           |
+| **Logs**         | `acp serve logs` (local file) | `acp serve deploy railway logs`    |
+| **Use case**     | Development, testing          | Production                         |
 
 Both use the same seller runtime code (`src/seller/runtime/seller.ts`). The only difference is how the API key is loaded and how the process is managed.
 

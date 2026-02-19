@@ -28,33 +28,24 @@ export function connectAcpSocket(opts: AcpSocketOptions): () => void {
     transports: ["websocket"],
   });
 
-  socket.on(
-    SocketEvent.ROOM_JOINED,
-    (_data: unknown, callback?: (ack: boolean) => void) => {
-      console.log("[socket] Joined ACP room");
-      if (typeof callback === "function") callback(true);
-    }
-  );
+  socket.on(SocketEvent.ROOM_JOINED, (_data: unknown, callback?: (ack: boolean) => void) => {
+    console.log("[socket] Joined ACP room");
+    if (typeof callback === "function") callback(true);
+  });
 
-  socket.on(
-    SocketEvent.ON_NEW_TASK,
-    (data: AcpJobEventData, callback?: (ack: boolean) => void) => {
-      if (typeof callback === "function") callback(true);
-      console.log(`[socket] onNewTask  jobId=${data.id}  phase=${data.phase}`);
-      callbacks.onNewTask(data);
-    }
-  );
+  socket.on(SocketEvent.ON_NEW_TASK, (data: AcpJobEventData, callback?: (ack: boolean) => void) => {
+    if (typeof callback === "function") callback(true);
+    console.log(`[socket] onNewTask  jobId=${data.id}  phase=${data.phase}`);
+    callbacks.onNewTask(data);
+  });
 
-  socket.on(
-    SocketEvent.ON_EVALUATE,
-    (data: AcpJobEventData, callback?: (ack: boolean) => void) => {
-      if (typeof callback === "function") callback(true);
-      console.log(`[socket] onEvaluate  jobId=${data.id}  phase=${data.phase}`);
-      if (callbacks.onEvaluate) {
-        callbacks.onEvaluate(data);
-      }
+  socket.on(SocketEvent.ON_EVALUATE, (data: AcpJobEventData, callback?: (ack: boolean) => void) => {
+    if (typeof callback === "function") callback(true);
+    console.log(`[socket] onEvaluate  jobId=${data.id}  phase=${data.phase}`);
+    if (callbacks.onEvaluate) {
+      callbacks.onEvaluate(data);
     }
-  );
+  });
 
   socket.on("connect", () => {
     console.log("[socket] Connected to ACP");

@@ -83,9 +83,7 @@ export async function browse(query: string): Promise<void> {
               const req =
                 typeof o.requirement === "string"
                   ? o.requirement
-                  : JSON.stringify(o.requirement, null, 2)
-                    .split("\n")
-                    .join("\n          ");
+                  : JSON.stringify(o.requirement, null, 2).split("\n").join("\n          ");
               output.log(`        Requirement: ${req}`);
             }
           }
@@ -103,9 +101,7 @@ export async function browse(query: string): Promise<void> {
               output.log(`        URL: ${r.url}`);
             }
             if (r.params) {
-              const params = JSON.stringify(r.params, null, 2)
-                .split("\n")
-                .join("\n          ");
+              const params = JSON.stringify(r.params, null, 2).split("\n").join("\n          ");
               output.log(`        Params: ${params}`);
             }
           }
@@ -114,8 +110,6 @@ export async function browse(query: string): Promise<void> {
       output.log("");
     });
   } catch (e) {
-    output.fatal(
-      `Browse failed: ${e instanceof Error ? e.message : String(e)}`
-    );
+    output.fatal(`Browse failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

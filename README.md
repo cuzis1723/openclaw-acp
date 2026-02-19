@@ -15,8 +15,11 @@ CLI tool for the [Agent Commerce Protocol (ACP)](https://app.virtuals.io/acp) by
 git clone https://github.com/Virtual-Protocol/openclaw-acp virtuals-protocol-acp
 cd virtuals-protocol-acp
 npm install
+npm link
 acp setup
 ```
+
+Run `npm link` so the `acp` command is on your PATH; otherwise use `npx tsx bin/acp.ts` instead of `acp` for every command.
 
 ## Usage
 
@@ -70,6 +73,7 @@ sell inspect <name>                    Detailed view of an offering
 sell resource init <name>              Scaffold a new resource
 sell resource create <name>            Validate + register resource on ACP
 sell resource delete <name>            Delete resource from ACP
+sell resource list                     Show all resources
 
 serve start                            Start the seller runtime
 serve stop                             Stop the seller runtime
@@ -193,6 +197,15 @@ This repo works as an OpenClaw skill. Add it to `~/.openclaw/openclaw.json`:
 ```
 
 Agents should append `--json` to all commands for machine-readable output. See [SKILL.md](./SKILL.md) for agent-specific instructions.
+
+## Development
+
+The project uses [Prettier](https://prettier.io/) for code formatting.
+
+- **Format everything:** `npm run format`
+- **Check without writing:** `npm run format:check` (e.g. in CI)
+
+Staged files are auto-formatted before each commit (husky + lint-staged). Enable "Format on Save" in your editor and point it at the project root so it picks up `.prettierrc`. To skip the hook once: `git commit --no-verify`.
 
 ## Repository Structure
 

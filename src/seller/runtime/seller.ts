@@ -40,12 +40,7 @@ function setupCleanupHandlers(): void {
     process.exit(1);
   });
   process.on("unhandledRejection", (reason, promise) => {
-    console.error(
-      "[seller] Unhandled rejection at:",
-      promise,
-      "reason:",
-      reason
-    );
+    console.error("[seller] Unhandled rejection at:", promise, "reason:", reason);
     cleanup();
     process.exit(1);
   });
@@ -60,9 +55,7 @@ let agentDirName: string = "";
 
 function resolveOfferingName(data: AcpJobEventData): string | undefined {
   try {
-    const negotiationMemo = data.memos.find(
-      (m) => m.nextPhase === AcpJobPhase.NEGOTIATION
-    );
+    const negotiationMemo = data.memos.find((m) => m.nextPhase === AcpJobPhase.NEGOTIATION);
     if (negotiationMemo) {
       return JSON.parse(negotiationMemo.content).name;
     }
@@ -71,12 +64,8 @@ function resolveOfferingName(data: AcpJobEventData): string | undefined {
   }
 }
 
-function resolveServiceRequirements(
-  data: AcpJobEventData
-): Record<string, any> {
-  const negotiationMemo = data.memos.find(
-    (m) => m.nextPhase === AcpJobPhase.NEGOTIATION
-  );
+function resolveServiceRequirements(data: AcpJobEventData): Record<string, any> {
+  const negotiationMemo = data.memos.find((m) => m.nextPhase === AcpJobPhase.NEGOTIATION);
   if (negotiationMemo) {
     try {
       return JSON.parse(negotiationMemo.content).requirement;
@@ -91,10 +80,7 @@ async function handleNewTask(data: AcpJobEventData): Promise<void> {
   const jobId = data.id;
 
   console.log(`\n${"=".repeat(60)}`);
-  console.log(
-    `[seller] New task  jobId=${jobId}  phase=${AcpJobPhase[data.phase] ?? data.phase
-    }`
-  );
+  console.log(`[seller] New task  jobId=${jobId}  phase=${AcpJobPhase[data.phase] ?? data.phase}`);
   console.log(`         client=${data.clientAddress}  price=${data.price}`);
   console.log(`         context=${JSON.stringify(data.context)}`);
   console.log(`${"=".repeat(60)}`);
@@ -105,9 +91,7 @@ async function handleNewTask(data: AcpJobEventData): Promise<void> {
       return;
     }
 
-    const negotiationMemo = data.memos.find(
-      (m) => m.id == Number(data.memoToSign)
-    );
+    const negotiationMemo = data.memos.find((m) => m.id == Number(data.memoToSign));
 
     if (negotiationMemo?.nextPhase !== AcpJobPhase.NEGOTIATION) {
       return;
@@ -166,16 +150,16 @@ async function handleNewTask(data: AcpJobEventData): Promise<void> {
 
       const paymentReason = handlers.requestPayment
         ? handlers.requestPayment(requirements)
-        : funds?.content ?? "Request accepted";
+        : (funds?.content ?? "Request accepted");
 
       await requestPayment(jobId, {
         content: paymentReason,
         payableDetail: funds
           ? {
-            amount: funds.amount,
-            tokenAddress: funds.tokenAddress,
-            recipient: funds.recipient,
-          }
+              amount: funds.amount,
+              tokenAddress: funds.tokenAddress,
+              recipient: funds.recipient,
+            }
           : undefined,
       });
     } catch (err) {
@@ -194,9 +178,7 @@ async function handleNewTask(data: AcpJobEventData): Promise<void> {
         console.log(
           `[seller] Executing offering "${offeringName}" for job ${jobId} (TRANSACTION phase)...`
         );
-        const result: ExecuteJobResult = await handlers.executeJob(
-          requirements
-        );
+        const result: ExecuteJobResult = await handlers.executeJob(requirements);
 
         await deliverJob(jobId, {
           deliverable: result.deliverable,
@@ -207,16 +189,13 @@ async function handleNewTask(data: AcpJobEventData): Promise<void> {
         console.error(`[seller] Error delivering job ${jobId}:`, err);
       }
     } else {
-      console.log(
-        `[seller] Job ${jobId} in TRANSACTION but no offering resolved — skipping`
-      );
+      console.log(`[seller] Job ${jobId} in TRANSACTION but no offering resolved — skipping`);
     }
     return;
   }
 
   console.log(
-    `[seller] Job ${jobId} in phase ${AcpJobPhase[data.phase] ?? data.phase
-    } — no action needed`
+    `[seller] Job ${jobId} in phase ${AcpJobPhase[data.phase] ?? data.phase} — no action needed`
   );
 }
 
@@ -242,8 +221,7 @@ async function main() {
 
   const offerings = listOfferings(agentDirName);
   console.log(
-    `[seller] Available offerings: ${offerings.length > 0 ? offerings.join(", ") : "(none)"
-    }`
+    `[seller] Available offerings: ${offerings.length > 0 ? offerings.join(", ") : "(none)"}`
   );
 
   connectAcpSocket({
